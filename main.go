@@ -21,10 +21,12 @@ In other words, load and play the game!`,
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		err := zmachine.Load(args[0])
+		interpreter, err := zmachine.Load(args[0])
 		if err != nil {
 			panic(err)
 		}
+
+		interpreter.Run()
 	},
 }
 
