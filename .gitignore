@@ -6,7 +6,7 @@ stories/
 *.log
 .env
 golang-zmachine
-zmachine
+./zmachine
 
 # VSCode
 .vscode/*
