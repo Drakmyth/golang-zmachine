@@ -1,4 +1,4 @@
-module github.com/Drakmyth/go-template-cli
+module github.com/Drakmyth/golang-zmachine
 
 go 1.22.5
 

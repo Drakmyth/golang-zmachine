@@ -6,7 +6,7 @@ COPY . ./
 RUN go mod download && go mod verify
 
 RUN useradd -u 1001 appuser
-RUN go build -ldflags="-linkmode external -extldflags -static" -o ./bin/go-template-cli
+RUN go build -ldflags="-linkmode external -extldflags -static" -o ./bin/zmachine
 
 
 # Production Release Stage
@@ -16,8 +16,8 @@ WORKDIR /app
 ENV GIN_MODE=release
 
 COPY --from=build /etc/passwd /etc/passwd
-COPY --from=build /app/bin/go-template-cli ./go-template-cli
+COPY --from=build /app/bin/zmachine ./zmachine
 
 USER appuser
 
-ENTRYPOINT ["./go-template-cli"]
+ENTRYPOINT ["./zmachine"]

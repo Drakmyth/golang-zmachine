@@ -1,6 +1,6 @@
-# go-template-cli
+# golang-zmachine
 
-This is a quick and simple example of a Go CLI application. The [Cobra](https://github.com/spf13/cobra) library is used to handle argument and flag parsing.
+This is a Z-Machine interpreter implemented in Go. It was built as a learning exercise to both gain a better handle on Go itself, as well as to gain insight into the structure and operation of a text adventure game engine. Feature-wise it is pretty barebones comared to other Z-Machine implementations, but it gets the job done.
 
 ### Built With
 
@@ -8,37 +8,48 @@ This is a quick and simple example of a Go CLI application. The [Cobra](https://
 
 ## Usage
 
-Execute `go-template-cli help` for more detailed information.
+```sh
+> zmachine <story-path>
+```
 
-Command    | Arguments              | Description
----------- | ---------------------- | -----------
-subcommand | `[flags] <input-text>` | Example argument handling
+Arguments      | Description
+-------------- | -----------
+`<story-path>` | Load and play the specified story file
+
+Execute `zmachine help` for more detailed information.
 
 ## Development
 
 ### Build
 
-```go
-> go build
+```sh
+> go build -o zmachine
+```
+
+or on Windows
+
+```sh
+> go build -o zmachine.exe
 ```
 
 ### Debugging
 
-Using the [Delve][delve-url] debugger with CLI applications is a little tricky. See the [Delve documentation][delve-debug-url] for recommended procedures on how to do this.
+Using the [Delve][delve-url] debugger with CLI applications is a little tricky. See the [Delve documentation][delve-debug-url] for recommended procedures on how to do this. A VSCode [launch.json](./.vscode/launch.json) has been provided that runs and debugs the build using a hardcoded story file path.
 
 ### Release
 
-While the produced binary is a CLI application and is intended to be executed by directly, a containerized installation is also provided. This container utilizes a dedicated build stage along with the [scratch][scratch-url] Docker image to ensure the final image contains only the necessary resources and nothing else.
+While `zmachine` is a CLI application and is intended to be executed by directly, a containerized installation is also provided. This container utilizes a dedicated build stage along with the [scratch][scratch-url] Docker image to ensure the final image contains only the necessary resources and nothing else.
 
 #### Build
+
 ```sh
-> docker build . -t go-template-cli
-> docker run go-template-cli subcommand "Hello, World!"
+> docker build . -t zmachine
+> docker run zmachine <story-path>
 ```
 
 ## License
 
-This example code is provided to the public domain via the CC0 1.0 Universal License. See [LICENSE.md](./LICENSE.md) for more information.
+Distributed under the MIT License. See [LICENSE.md](./LICENSE.md) for more information.
 
 
 <!-- Reference Links -->

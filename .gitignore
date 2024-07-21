@@ -1,8 +1,12 @@
+# golang-zmachine
+stories/
+
 # Go
 *.exe
 *.log
 .env
-go-template-cli
+golang-zmachine
+zmachine
 
 # VSCode
 .vscode/*
