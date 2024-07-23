@@ -45,6 +45,10 @@ func (instruction Instruction) String() string {
 		log_strings = append(log_strings, fmt.Sprintf("$%x", operand.Value))
 	}
 
+	if instruction.PerformsStore {
+		log_strings = append(log_strings, string(instruction.Store))
+	}
+
 	if instruction.PerformsBranch {
 		log_strings = append(log_strings, string(instruction.BranchOffset))
 	}
@@ -210,8 +214,7 @@ func (zmachine *ZMachine) execute_next_instruction() {
 
 	fmt.Println(instruction)
 
-	instruction.Handler(zmachine, instruction, 0)
-	// TODO: execute instruction
+	instruction.Handler(zmachine, instruction)
 	zmachine.Counter = next_address
 }
 
@@ -223,6 +226,17 @@ func (zmachine ZMachine) read_word(address Address) (uint16, Address) {
 	byte1 := zmachine.Memory[address]
 	byte2 := zmachine.Memory[address+1]
 	return (uint16(byte1) << 8) | uint16(byte2), address + 2
+}
+
+func (zmachine *ZMachine) write_byte(value uint8, address Address) {
+	zmachine.Memory[address] = value
+}
+
+func (zmachine *ZMachine) write_word(value uint16, address Address) {
+	byte1 := uint8(value >> 8)
+	byte2 := uint8(value)
+	zmachine.Memory[address] = byte1
+	zmachine.Memory[address+1] = byte2
 }
 
 func (zmachine ZMachine) get_routine_address(address Address) Address {
