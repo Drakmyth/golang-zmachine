@@ -10,6 +10,7 @@ type OpcodeInfo struct {
 }
 
 var opcodes = map[uint8]OpcodeInfo{
+	0x4f: {true, false, false, loadw},
 	0x54: {true, false, false, add},
 	0x55: {true, false, false, sub},
 	0x61: {false, true, false, je},
@@ -100,6 +101,14 @@ func jz(zmachine *ZMachine, instruction Instruction) bool {
 		}
 	}
 
+	return false
+}
+
+func loadw(zmachine *ZMachine, instruction Instruction) bool {
+	array := zmachine.get_operand_value(instruction.Operands[0])
+	word_index := zmachine.get_operand_value(instruction.Operands[1])
+	value, _ := zmachine.read_word(Address(array + 2*word_index))
+	zmachine.write_variable(value, instruction.Store)
 	return false
 }
 
