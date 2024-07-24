@@ -10,6 +10,7 @@ type OpcodeInfo struct {
 }
 
 var opcodes = map[uint8]OpcodeInfo{
+	0x04: {false, true, false, dec_chk},
 	0x4f: {true, false, false, loadw},
 	0x54: {true, false, false, add},
 	0x55: {true, false, false, sub},
@@ -56,6 +57,34 @@ func call(zmachine *ZMachine, instruction Instruction) bool {
 	frame.Counter = next_address
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
 	return false // Return false because the previous frame hasn't been updated yet even though there is a new frame
+}
+
+func dec_chk(zmachine *ZMachine, instruction Instruction) bool {
+	variable := uint8(zmachine.get_operand_value(instruction.Operands[0]))
+	value := zmachine.get_operand_value(instruction.Operands[1])
+
+	variable_value := zmachine.read_variable(variable)
+	variable_value--
+	zmachine.write_variable(variable_value, variable)
+
+	if instruction.BranchBehavior == BRANCHBEHAVIOR_None {
+		panic("branch with no behavior")
+	}
+
+	if instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnTrue && variable_value < value ||
+		instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnFalse && variable_value >= value {
+		switch instruction.BranchAddress {
+		case 0:
+			panic("unimplemented: branch offset 0")
+		case 1:
+			panic("unimplemented: branch offset 1")
+		default:
+			zmachine.CurrentFrame().Counter = instruction.BranchAddress
+			return true
+		}
+	}
+
+	return false
 }
 
 func je(zmachine *ZMachine, instruction Instruction) bool {
