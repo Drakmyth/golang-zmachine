@@ -44,7 +44,7 @@ func (instruction Instruction) String() string {
 	operation_name := strings.ToUpper(function_path[len(function_path)-1])
 
 	log_strings := make([]string, 0, len(instruction.Operands)+4)
-	log_strings = append(log_strings, operation_name)
+	log_strings = append(log_strings, fmt.Sprintf("%s(%x)", operation_name, instruction.Opcode))
 	for _, operand := range instruction.Operands {
 		log_strings = append(log_strings, fmt.Sprintf("$%x", operand.Value))
 	}
@@ -63,6 +63,17 @@ func (instruction Instruction) String() string {
 type Operand struct {
 	Type  OpType
 	Value uint16
+}
+
+func (zmachine ZMachine) get_operand_value(operand Operand) uint16 {
+	switch operand.Type {
+	case OPTYPE_Omitted:
+		return 0
+	case OPTYPE_Variable:
+		return zmachine.read_variable(uint8(operand.Value))
+	default:
+		return operand.Value
+	}
 }
 
 type BranchBehavior uint8

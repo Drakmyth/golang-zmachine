@@ -19,15 +19,21 @@ var opcodes = map[uint8]OpcodeInfo{
 }
 
 func add(zmachine *ZMachine, instruction Instruction) {
-	a := instruction.Operands[0].Value
-	b := instruction.Operands[1].Value
+	a := zmachine.get_operand_value(instruction.Operands[0])
+	b := zmachine.get_operand_value(instruction.Operands[1])
 	zmachine.write_variable(a+b, instruction.Store)
 }
 
 func call(zmachine *ZMachine, instruction Instruction) {
 	// TODO: This probably isn't implemented completely correctly. There isn't really a way to return from a call right now...
 	// TODO: Need to store return value via `zmachine.write_variable(value, instruction.Store)`
-	routineAddr := zmachine.get_routine_address((Address)(instruction.Operands[0].Value))
+	packed_address := Address(zmachine.get_operand_value(instruction.Operands[0]))
+	if packed_address == 0 {
+		// TODO: return false
+		panic("unimplemented: call address 0")
+	}
+
+	routineAddr := zmachine.get_routine_address(packed_address)
 	num_locals, next_address := zmachine.read_byte(routineAddr)
 	frame := StackFrame{}
 	for range num_locals {
@@ -39,13 +45,17 @@ func call(zmachine *ZMachine, instruction Instruction) {
 		}
 		frame.Locals = append(frame.Locals, local)
 	}
+
+	for i := 0; i < min(int(num_locals), len(instruction.Operands)); i++ {
+		frame.Locals[i] = zmachine.get_operand_value(instruction.Operands[i])
+	}
 	frame.Counter = next_address
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
 }
 
 func je(zmachine *ZMachine, instruction Instruction) {
-	a := instruction.Operands[0].Value
-	b := instruction.Operands[1].Value
+	a := zmachine.get_operand_value(instruction.Operands[0])
+	b := zmachine.get_operand_value(instruction.Operands[1])
 
 	if instruction.BranchBehavior == BRANCHBEHAVIOR_None {
 		panic("branch with no behavior")
@@ -65,18 +75,18 @@ func je(zmachine *ZMachine, instruction Instruction) {
 }
 
 func storew(zmachine *ZMachine, instruction Instruction) {
-	array := instruction.Operands[0].Value
-	word_index := instruction.Operands[1].Value
-	value := instruction.Operands[2].Value
+	array := zmachine.get_operand_value(instruction.Operands[0])
+	word_index := zmachine.get_operand_value(instruction.Operands[1])
+	value := zmachine.get_operand_value(instruction.Operands[2])
 
 	address := Address(array + 2*word_index)
 	zmachine.write_word(value, address)
 }
 
 func storeb(zmachine *ZMachine, instruction Instruction) {
-	array := instruction.Operands[0].Value
-	byte_index := instruction.Operands[1].Value
-	value := uint8(instruction.Operands[2].Value)
+	array := zmachine.get_operand_value(instruction.Operands[0])
+	byte_index := zmachine.get_operand_value(instruction.Operands[1])
+	value := uint8(zmachine.get_operand_value(instruction.Operands[2]))
 
 	address := Address(array + byte_index)
 	zmachine.write_byte(value, address)
