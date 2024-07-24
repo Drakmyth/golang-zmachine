@@ -16,6 +16,7 @@ var opcodes = map[uint8]OpcodeInfo{
 	0x55: {true, false, false, sub},
 	0x61: {false, true, false, je},
 	0x74: {true, false, false, add},
+	0x86: {false, false, false, dec},
 	0x8c: {false, false, false, jump},
 	0xa0: {false, true, false, jz},
 	0xe0: {true, false, false, call}, // TODO: In V4 Store should equal false
@@ -57,6 +58,16 @@ func call(zmachine *ZMachine, instruction Instruction) bool {
 	frame.Counter = next_address
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
 	return false // Return false because the previous frame hasn't been updated yet even though there is a new frame
+}
+
+func dec(zmachine *ZMachine, instruction Instruction) bool {
+	variable := uint8(zmachine.get_operand_value(instruction.Operands[0]))
+
+	variable_value := zmachine.read_variable(variable)
+	variable_value--
+	zmachine.write_variable(variable_value, variable)
+
+	return false
 }
 
 func dec_chk(zmachine *ZMachine, instruction Instruction) bool {
