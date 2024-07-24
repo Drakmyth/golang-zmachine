@@ -14,6 +14,7 @@ var opcodes = map[uint8]OpcodeInfo{
 	0x55: {true, false, false, sub},
 	0x61: {false, true, false, je},
 	0x74: {true, false, false, add},
+	0xa0: {false, true, false, jz},
 	0xe0: {true, false, false, call}, // TODO: In V4 Store should equal false
 	0xe1: {false, false, false, storew},
 	0xe2: {false, false, false, storeb},
@@ -64,6 +65,26 @@ func je(zmachine *ZMachine, instruction Instruction) {
 
 	if instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnTrue && a == b ||
 		instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnFalse && a != b {
+		switch instruction.BranchAddress {
+		case 0:
+			panic("unimplemented: branch offset 0")
+		case 1:
+			panic("unimplemented: branch offset 1")
+		default:
+			zmachine.CurrentFrame().Counter = instruction.BranchAddress
+		}
+	}
+}
+
+func jz(zmachine *ZMachine, instruction Instruction) {
+	a := zmachine.get_operand_value(instruction.Operands[0])
+
+	if instruction.BranchBehavior == BRANCHBEHAVIOR_None {
+		panic("branch with no behavior")
+	}
+
+	if instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnTrue && a == 0 ||
+		instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnFalse && a != 0 {
 		switch instruction.BranchAddress {
 		case 0:
 			panic("unimplemented: branch offset 0")
