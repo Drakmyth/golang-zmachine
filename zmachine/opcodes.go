@@ -15,6 +15,7 @@ var opcodes = map[uint8]OpcodeInfo{
 	0x55: {true, false, false, sub},
 	0x61: {false, true, false, je},
 	0x74: {true, false, false, add},
+	0x8c: {false, false, false, jump},
 	0xa0: {false, true, false, jz},
 	0xe0: {true, false, false, call}, // TODO: In V4 Store should equal false
 	0xe1: {false, false, false, storew},
@@ -79,6 +80,13 @@ func je(zmachine *ZMachine, instruction Instruction) bool {
 	}
 
 	return false
+}
+
+func jump(zmachine *ZMachine, instruction Instruction) bool {
+	offset := zmachine.get_operand_value(instruction.Operands[0])
+	frame := zmachine.CurrentFrame()
+	frame.Counter = Address(uint16(frame.Counter) + offset)
+	return true
 }
 
 func jz(zmachine *ZMachine, instruction Instruction) bool {
