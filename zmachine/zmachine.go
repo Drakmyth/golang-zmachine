@@ -248,8 +248,10 @@ func (zmachine *ZMachine) execute_next_instruction() error {
 
 	fmt.Printf("%x: %s\n", pc, instruction)
 
-	instruction.Handler(zmachine, instruction)
-	frame.Counter = next_address
+	counter_updated := instruction.Handler(zmachine, instruction)
+	if !counter_updated {
+		frame.Counter = next_address
+	}
 	return err
 }
 
@@ -284,10 +286,10 @@ func (zmachine *ZMachine) read_variable(index uint8) uint16 {
 	} else if index > 0 && index < 0x10 {
 		// Local variable
 		frame := zmachine.CurrentFrame()
-		return frame.Locals[index]
+		return frame.Locals[index-1]
 	} else {
 		// Global variable
-		value, _ := zmachine.read_word(Address(uint16(zmachine.Header.GlobalsAddr) + uint16(index)))
+		value, _ := zmachine.read_word(Address(uint16(zmachine.Header.GlobalsAddr) + uint16(index-0x10)))
 		return value
 	}
 }
@@ -300,9 +302,9 @@ func (zmachine *ZMachine) write_variable(value uint16, index uint8) {
 	} else if index > 0 && index < 0x10 {
 		// Local variable
 		frame := zmachine.CurrentFrame()
-		frame.Locals[index] = value
+		frame.Locals[index-1] = value
 	} else {
-		zmachine.write_word(value, Address(uint16(zmachine.Header.GlobalsAddr)+uint16(index)))
+		zmachine.write_word(value, Address(uint16(zmachine.Header.GlobalsAddr)+uint16(index-0x10)))
 	}
 }
 

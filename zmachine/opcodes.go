@@ -1,6 +1,6 @@
 package zmachine
 
-type InstructionHandler func(*ZMachine, Instruction)
+type InstructionHandler func(*ZMachine, Instruction) bool
 
 type OpcodeInfo struct {
 	PerformsStore  bool
@@ -20,18 +20,18 @@ var opcodes = map[uint8]OpcodeInfo{
 	0xe2: {false, false, false, storeb},
 }
 
-func add(zmachine *ZMachine, instruction Instruction) {
+func add(zmachine *ZMachine, instruction Instruction) bool {
 	a := zmachine.get_operand_value(instruction.Operands[0])
 	b := zmachine.get_operand_value(instruction.Operands[1])
 	zmachine.write_variable(a+b, instruction.Store)
+	return false
 }
 
-func call(zmachine *ZMachine, instruction Instruction) {
+func call(zmachine *ZMachine, instruction Instruction) bool {
 	// TODO: This probably isn't implemented completely correctly. There isn't really a way to return from a call right now...
 	// TODO: Need to store return value via `zmachine.write_variable(value, instruction.Store)`
 	packed_address := Address(zmachine.get_operand_value(instruction.Operands[0]))
 	if packed_address == 0 {
-		// TODO: return false
 		panic("unimplemented: call address 0")
 	}
 
@@ -53,9 +53,10 @@ func call(zmachine *ZMachine, instruction Instruction) {
 	}
 	frame.Counter = next_address
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
+	return false // Return false because the previous frame hasn't been updated yet even though there is a new frame
 }
 
-func je(zmachine *ZMachine, instruction Instruction) {
+func je(zmachine *ZMachine, instruction Instruction) bool {
 	a := zmachine.get_operand_value(instruction.Operands[0])
 	b := zmachine.get_operand_value(instruction.Operands[1])
 
@@ -72,11 +73,14 @@ func je(zmachine *ZMachine, instruction Instruction) {
 			panic("unimplemented: branch offset 1")
 		default:
 			zmachine.CurrentFrame().Counter = instruction.BranchAddress
+			return true
 		}
 	}
+
+	return false
 }
 
-func jz(zmachine *ZMachine, instruction Instruction) {
+func jz(zmachine *ZMachine, instruction Instruction) bool {
 	a := zmachine.get_operand_value(instruction.Operands[0])
 
 	if instruction.BranchBehavior == BRANCHBEHAVIOR_None {
@@ -92,30 +96,36 @@ func jz(zmachine *ZMachine, instruction Instruction) {
 			panic("unimplemented: branch offset 1")
 		default:
 			zmachine.CurrentFrame().Counter = instruction.BranchAddress
+			return true
 		}
 	}
+
+	return false
 }
 
-func storew(zmachine *ZMachine, instruction Instruction) {
+func storew(zmachine *ZMachine, instruction Instruction) bool {
 	array := zmachine.get_operand_value(instruction.Operands[0])
 	word_index := zmachine.get_operand_value(instruction.Operands[1])
 	value := zmachine.get_operand_value(instruction.Operands[2])
 
 	address := Address(array + 2*word_index)
 	zmachine.write_word(value, address)
+	return false
 }
 
-func storeb(zmachine *ZMachine, instruction Instruction) {
+func storeb(zmachine *ZMachine, instruction Instruction) bool {
 	array := zmachine.get_operand_value(instruction.Operands[0])
 	byte_index := zmachine.get_operand_value(instruction.Operands[1])
 	value := uint8(zmachine.get_operand_value(instruction.Operands[2]))
 
 	address := Address(array + byte_index)
 	zmachine.write_byte(value, address)
+	return false
 }
 
-func sub(zmachine *ZMachine, instruction Instruction) {
+func sub(zmachine *ZMachine, instruction Instruction) bool {
 	a := zmachine.get_operand_value(instruction.Operands[0])
 	b := zmachine.get_operand_value(instruction.Operands[1])
 	zmachine.write_variable(a-b, instruction.Store)
+	return false
 }
