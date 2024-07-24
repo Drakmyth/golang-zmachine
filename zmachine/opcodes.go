@@ -20,7 +20,7 @@ func call(zmachine *ZMachine, instruction Instruction) {
 	// TODO: Need to store return value via `zmachine.write_variable(value, instruction.Store)`
 	routineAddr := zmachine.get_routine_address((Address)(instruction.Operands[0].Value))
 	num_locals, next_address := zmachine.read_byte(routineAddr)
-	locals := make([]uint16, 0, num_locals)
+	frame := StackFrame{}
 	for range num_locals {
 		var local uint16
 		if zmachine.Header.Version < 5 {
@@ -28,10 +28,10 @@ func call(zmachine *ZMachine, instruction Instruction) {
 		} else {
 			local = 0
 		}
-		locals = append(locals, local)
+		frame.Locals = append(frame.Locals, local)
 	}
-	zmachine.CallState = append(zmachine.CallState, locals)
-	zmachine.Counter = next_address
+	frame.Counter = next_address
+	zmachine.StackFrames = append(zmachine.StackFrames, frame)
 }
 
 func storew(zmachine *ZMachine, instruction Instruction) {

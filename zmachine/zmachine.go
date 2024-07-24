@@ -11,11 +11,15 @@ import (
 )
 
 type ZMachine struct {
-	Counter   Address
-	Header    Header
-	Memory    []uint8
-	Stack     []uint16
-	CallState [][]uint16
+	Header      Header
+	Memory      []uint8
+	StackFrames []StackFrame
+}
+
+type StackFrame struct {
+	Counter Address
+	Stack   []uint16
+	Locals  []uint16
 }
 
 type Address uint16
@@ -161,8 +165,7 @@ type Font struct {
 
 func (zmachine *ZMachine) init(memory []uint8) {
 	zmachine.Memory = memory
-	zmachine.Stack = make([]uint16, 0, 1024)
-	zmachine.CallState = make([][]uint16, 0, 1024)
+	zmachine.StackFrames = make([]StackFrame, 0, 1024)
 
 	header := Header{}
 	err := binary.Read(bytes.NewBuffer(zmachine.Memory[0:64]), binary.BigEndian, &header)
@@ -171,7 +174,11 @@ func (zmachine *ZMachine) init(memory []uint8) {
 	}
 
 	zmachine.Header = header
-	zmachine.Counter = header.InitialProgramCounter
+	zmachine.StackFrames = append(zmachine.StackFrames, StackFrame{Counter: header.InitialProgramCounter})
+}
+
+func (zmachine ZMachine) CurrentFrame() *StackFrame {
+	return &zmachine.StackFrames[len(zmachine.StackFrames)-1]
 }
 
 func Load(story_path string) (*ZMachine, error) {
@@ -193,24 +200,26 @@ func (zmachine ZMachine) Run() {
 }
 
 func (zmachine *ZMachine) execute_next_instruction() {
-	opcode, _ := zmachine.read_byte(zmachine.Counter)
+	frame := zmachine.CurrentFrame()
+	pc := frame.Counter
+	opcode, _ := zmachine.read_byte(pc)
 
 	var instruction Instruction
 	var next_address Address
 	if is_short_instruction(opcode) {
-		instruction, next_address = zmachine.parse_short_instruction(zmachine.Counter)
+		instruction, next_address = zmachine.parse_short_instruction(pc)
 	} else if is_variable_instruction(opcode) {
-		instruction, next_address = zmachine.parse_variable_instruction(zmachine.Counter)
+		instruction, next_address = zmachine.parse_variable_instruction(pc)
 	} else if is_extended_instruction(opcode, zmachine.Header.Version) {
-		instruction, next_address = zmachine.parse_extended_instruction(zmachine.Counter)
+		instruction, next_address = zmachine.parse_extended_instruction(pc)
 	} else {
-		instruction, next_address = zmachine.parse_long_instruction(zmachine.Counter)
+		instruction, next_address = zmachine.parse_long_instruction(pc)
 	}
 
-	fmt.Printf("%x: %s\n", zmachine.Counter, instruction)
+	fmt.Printf("%x: %s\n", pc, instruction)
 
 	instruction.Handler(zmachine, instruction)
-	zmachine.Counter = next_address
+	frame.Counter = next_address
 }
 
 func (zmachine ZMachine) read_byte(address Address) (uint8, Address) {
@@ -236,13 +245,15 @@ func (zmachine *ZMachine) write_word(value uint16, address Address) {
 
 func (zmachine *ZMachine) read_variable(index uint8) uint16 {
 	if index == 0 {
+		frame := zmachine.CurrentFrame()
 		// Pop from stack
-		value := zmachine.Stack[len(zmachine.Stack)-1]
-		zmachine.Stack = zmachine.Stack[:len(zmachine.Stack)-1]
+		value := frame.Stack[len(frame.Stack)-1]
+		frame.Stack = frame.Stack[:len(frame.Stack)-1]
 		return value
 	} else if index > 0 && index < 0x10 {
 		// Local variable
-		return zmachine.CallState[len(zmachine.CallState)][index]
+		frame := zmachine.CurrentFrame()
+		return frame.Locals[index]
 	} else {
 		// Global variable
 		value, _ := zmachine.read_word(Address(uint16(zmachine.Header.GlobalsAddr) + uint16(index)))
@@ -253,10 +264,12 @@ func (zmachine *ZMachine) read_variable(index uint8) uint16 {
 func (zmachine *ZMachine) write_variable(value uint16, index uint8) {
 	if index == 0 {
 		// Push to stack
-		zmachine.Stack = append(zmachine.Stack, value)
+		frame := zmachine.CurrentFrame()
+		frame.Stack = append(frame.Stack, value)
 	} else if index > 0 && index < 0x10 {
 		// Local variable
-		zmachine.CallState[len(zmachine.CallState)][index] = value
+		frame := zmachine.CurrentFrame()
+		frame.Locals[index] = value
 	} else {
 		zmachine.write_word(value, Address(uint16(zmachine.Header.GlobalsAddr)+uint16(index)))
 	}
