@@ -11,6 +11,7 @@ type OpcodeInfo struct {
 
 var opcodes = map[uint8]OpcodeInfo{
 	0x54: {true, false, false, add},
+	0x74: {true, false, false, add},
 	0xe0: {true, false, false, call}, // TODO: In V4 Store should equal false
 	0xe1: {false, false, false, storew},
 	0xe2: {false, false, false, storeb},

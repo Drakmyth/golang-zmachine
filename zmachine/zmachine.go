@@ -309,7 +309,7 @@ func (zmachine ZMachine) parse_short_instruction(address Address) (Instruction, 
 	opcode, next_address := zmachine.read_byte(address)
 	opinfo, ok := opcodes[opcode]
 	if !ok {
-		return Instruction{}, 0, errors.New(fmt.Sprintf("unknown opcode: %x", opcode))
+		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
 	}
 	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
 
@@ -358,7 +358,7 @@ func (zmachine ZMachine) parse_variable_instruction(address Address) (Instructio
 	opcode, next_address := zmachine.read_byte(address)
 	opinfo, ok := opcodes[opcode]
 	if !ok {
-		return Instruction{}, 0, errors.New(fmt.Sprintf("unknown opcode: %x", opcode))
+		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
 	}
 	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
 
@@ -422,7 +422,7 @@ func (zmachine ZMachine) parse_long_instruction(address Address) (Instruction, A
 	opcode, next_address := zmachine.read_byte(address)
 	opinfo, ok := opcodes[opcode]
 	if !ok {
-		return Instruction{}, 0, errors.New(fmt.Sprintf("unknown opcode: %x", opcode))
+		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
 	}
 	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
 
