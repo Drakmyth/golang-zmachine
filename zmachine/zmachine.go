@@ -11,13 +11,11 @@ import (
 )
 
 type ZMachine struct {
-	Counter       Address
-	Header        Header
-	Memory        []uint8
-	DynamicMemory []uint8
-	StaticMemory  []uint8
-	HighMemory    []uint8
-	Stack         []uint16
+	Counter   Address
+	Header    Header
+	Memory    []uint8
+	Stack     []uint16
+	CallState [][]uint16
 }
 
 type Address uint16
@@ -46,11 +44,11 @@ func (instruction Instruction) String() string {
 	}
 
 	if instruction.PerformsStore {
-		log_strings = append(log_strings, string(instruction.Store))
+		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.Store))
 	}
 
 	if instruction.PerformsBranch {
-		log_strings = append(log_strings, string(instruction.BranchOffset))
+		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.BranchOffset))
 	}
 
 	return strings.Join(log_strings, " ")
@@ -164,6 +162,7 @@ type Font struct {
 func (zmachine *ZMachine) init(memory []uint8) {
 	zmachine.Memory = memory
 	zmachine.Stack = make([]uint16, 0, 1024)
+	zmachine.CallState = make([][]uint16, 0, 1024)
 
 	header := Header{}
 	err := binary.Read(bytes.NewBuffer(zmachine.Memory[0:64]), binary.BigEndian, &header)
@@ -172,11 +171,7 @@ func (zmachine *ZMachine) init(memory []uint8) {
 	}
 
 	zmachine.Header = header
-
 	zmachine.Counter = header.InitialProgramCounter
-	zmachine.DynamicMemory = memory[:header.StaticMemoryAddr]
-	zmachine.StaticMemory = memory[header.StaticMemoryAddr:min(len(memory), 0xffff)]
-	zmachine.HighMemory = memory[header.HighMemoryAddr:]
 }
 
 func Load(story_path string) (*ZMachine, error) {
@@ -212,7 +207,7 @@ func (zmachine *ZMachine) execute_next_instruction() {
 		instruction, next_address = zmachine.parse_long_instruction(zmachine.Counter)
 	}
 
-	fmt.Println(instruction)
+	fmt.Printf("%x: %s\n", zmachine.Counter, instruction)
 
 	instruction.Handler(zmachine, instruction)
 	zmachine.Counter = next_address
@@ -222,14 +217,14 @@ func (zmachine ZMachine) read_byte(address Address) (uint8, Address) {
 	return zmachine.Memory[address], address + 1
 }
 
+func (zmachine *ZMachine) write_byte(value uint8, address Address) {
+	zmachine.Memory[address] = value
+}
+
 func (zmachine ZMachine) read_word(address Address) (uint16, Address) {
 	byte1 := zmachine.Memory[address]
 	byte2 := zmachine.Memory[address+1]
 	return (uint16(byte1) << 8) | uint16(byte2), address + 2
-}
-
-func (zmachine *ZMachine) write_byte(value uint8, address Address) {
-	zmachine.Memory[address] = value
 }
 
 func (zmachine *ZMachine) write_word(value uint16, address Address) {
@@ -237,6 +232,34 @@ func (zmachine *ZMachine) write_word(value uint16, address Address) {
 	byte2 := uint8(value)
 	zmachine.Memory[address] = byte1
 	zmachine.Memory[address+1] = byte2
+}
+
+func (zmachine *ZMachine) read_variable(index uint8) uint16 {
+	if index == 0 {
+		// Pop from stack
+		value := zmachine.Stack[len(zmachine.Stack)-1]
+		zmachine.Stack = zmachine.Stack[:len(zmachine.Stack)-1]
+		return value
+	} else if index > 0 && index < 0x10 {
+		// Local variable
+		return zmachine.CallState[len(zmachine.CallState)][index]
+	} else {
+		// Global variable
+		value, _ := zmachine.read_word(Address(uint16(zmachine.Header.GlobalsAddr) + uint16(index)))
+		return value
+	}
+}
+
+func (zmachine *ZMachine) write_variable(value uint16, index uint8) {
+	if index == 0 {
+		// Push to stack
+		zmachine.Stack = append(zmachine.Stack, value)
+	} else if index > 0 && index < 0x10 {
+		// Local variable
+		zmachine.CallState[len(zmachine.CallState)][index] = value
+	} else {
+		zmachine.write_word(value, Address(uint16(zmachine.Header.GlobalsAddr)+uint16(index)))
+	}
 }
 
 func (zmachine ZMachine) get_routine_address(address Address) Address {

@@ -17,13 +17,20 @@ var opcodes = map[uint8]OpcodeInfo{
 
 func call(zmachine *ZMachine, instruction Instruction) {
 	// TODO: This probably isn't implemented completely correctly. There isn't really a way to return from a call right now...
+	// TODO: Need to store return value via `zmachine.write_variable(value, instruction.Store)`
 	routineAddr := zmachine.get_routine_address((Address)(instruction.Operands[0].Value))
 	num_locals, next_address := zmachine.read_byte(routineAddr)
+	locals := make([]uint16, 0, num_locals)
 	for range num_locals {
 		var local uint16
-		local, next_address = zmachine.read_word(next_address)
-		zmachine.Stack = append(zmachine.Stack, local)
+		if zmachine.Header.Version < 5 {
+			local, next_address = zmachine.read_word(next_address)
+		} else {
+			local = 0
+		}
+		locals = append(locals, local)
 	}
+	zmachine.CallState = append(zmachine.CallState, locals)
 	zmachine.Counter = next_address
 }
 
