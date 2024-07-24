@@ -3,6 +3,7 @@ package zmachine
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -163,18 +164,19 @@ type Font struct {
 	WidthUnits  uint8
 }
 
-func (zmachine *ZMachine) init(memory []uint8) {
+func (zmachine *ZMachine) init(memory []uint8) error {
 	zmachine.Memory = memory
 	zmachine.StackFrames = make([]StackFrame, 0, 1024)
 
 	header := Header{}
 	err := binary.Read(bytes.NewBuffer(zmachine.Memory[0:64]), binary.BigEndian, &header)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	zmachine.Header = header
 	zmachine.StackFrames = append(zmachine.StackFrames, StackFrame{Counter: header.InitialProgramCounter})
+	return err
 }
 
 func (zmachine ZMachine) CurrentFrame() *StackFrame {
@@ -186,40 +188,49 @@ func Load(story_path string) (*ZMachine, error) {
 
 	memory, err := os.ReadFile(story_path)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	zmachine.init(memory)
 	return &zmachine, nil
 }
 
-func (zmachine ZMachine) Run() {
+func (zmachine ZMachine) Run() error {
 	for {
-		zmachine.execute_next_instruction()
+		err := zmachine.execute_next_instruction()
+		if err != nil {
+			return err
+		}
 	}
 }
 
-func (zmachine *ZMachine) execute_next_instruction() {
+func (zmachine *ZMachine) execute_next_instruction() error {
 	frame := zmachine.CurrentFrame()
 	pc := frame.Counter
 	opcode, _ := zmachine.read_byte(pc)
 
 	var instruction Instruction
 	var next_address Address
+	var err error
 	if is_short_instruction(opcode) {
-		instruction, next_address = zmachine.parse_short_instruction(pc)
+		instruction, next_address, err = zmachine.parse_short_instruction(pc)
 	} else if is_variable_instruction(opcode) {
-		instruction, next_address = zmachine.parse_variable_instruction(pc)
+		instruction, next_address, err = zmachine.parse_variable_instruction(pc)
 	} else if is_extended_instruction(opcode, zmachine.Header.Version) {
-		instruction, next_address = zmachine.parse_extended_instruction(pc)
+		instruction, next_address, err = zmachine.parse_extended_instruction(pc)
 	} else {
-		instruction, next_address = zmachine.parse_long_instruction(pc)
+		instruction, next_address, err = zmachine.parse_long_instruction(pc)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	fmt.Printf("%x: %s\n", pc, instruction)
 
 	instruction.Handler(zmachine, instruction)
 	frame.Counter = next_address
+	return err
 }
 
 func (zmachine ZMachine) read_byte(address Address) (uint8, Address) {
@@ -294,11 +305,11 @@ func is_short_instruction(opcode uint8) bool {
 	return opcode>>6 == 0b10
 }
 
-func (zmachine ZMachine) parse_short_instruction(address Address) (Instruction, Address) {
+func (zmachine ZMachine) parse_short_instruction(address Address) (Instruction, Address, error) {
 	opcode, next_address := zmachine.read_byte(address)
 	opinfo, ok := opcodes[opcode]
 	if !ok {
-		panic(fmt.Sprintf("Unknown opcode: %x", opcode))
+		return Instruction{}, 0, errors.New(fmt.Sprintf("unknown opcode: %x", opcode))
 	}
 	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
 
@@ -336,18 +347,18 @@ func (zmachine ZMachine) parse_short_instruction(address Address) (Instruction, 
 	// 	// TODO: Text
 	// }
 
-	return instruction, next_address
+	return instruction, next_address, nil
 }
 
 func is_variable_instruction(opcode uint8) bool {
 	return opcode>>6 == 0b11
 }
 
-func (zmachine ZMachine) parse_variable_instruction(address Address) (Instruction, Address) {
+func (zmachine ZMachine) parse_variable_instruction(address Address) (Instruction, Address, error) {
 	opcode, next_address := zmachine.read_byte(address)
 	opinfo, ok := opcodes[opcode]
 	if !ok {
-		panic(fmt.Sprintf("Unknown opcode: %x", opcode))
+		return Instruction{}, 0, errors.New(fmt.Sprintf("unknown opcode: %x", opcode))
 	}
 	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
 
@@ -396,22 +407,22 @@ func (zmachine ZMachine) parse_variable_instruction(address Address) (Instructio
 	// 	// TODO: Text
 	// }
 
-	return instruction, next_address
+	return instruction, next_address, nil
 }
 
 func is_extended_instruction(opcode uint8, version uint8) bool {
 	return opcode == 0xBE && version >= 5
 }
 
-func (zmachine ZMachine) parse_extended_instruction(address Address) (Instruction, Address) {
-	panic("unimplemented")
+func (zmachine ZMachine) parse_extended_instruction(address Address) (Instruction, Address, error) {
+	return Instruction{}, 0, errors.New("unimplemented: extended instruction parsing")
 }
 
-func (zmachine ZMachine) parse_long_instruction(address Address) (Instruction, Address) {
+func (zmachine ZMachine) parse_long_instruction(address Address) (Instruction, Address, error) {
 	opcode, next_address := zmachine.read_byte(address)
 	opinfo, ok := opcodes[opcode]
 	if !ok {
-		panic(fmt.Sprintf("Unknown opcode: %x", opcode))
+		return Instruction{}, 0, errors.New(fmt.Sprintf("unknown opcode: %x", opcode))
 	}
 	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
 
@@ -452,5 +463,5 @@ func (zmachine ZMachine) parse_long_instruction(address Address) (Instruction, A
 	// 	// TODO: Text
 	// }
 
-	return instruction, next_address
+	return instruction, next_address, nil
 }

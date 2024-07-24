@@ -2,7 +2,8 @@ package main
 
 import (
 	"errors"
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/Drakmyth/golang-zmachine/zmachine"
 	"github.com/spf13/cobra"
@@ -23,16 +24,22 @@ In other words, load and play the game!`,
 
 		interpreter, err := zmachine.Load(args[0])
 		if err != nil {
-			panic(err)
+			fmt.Fprint(os.Stderr, err)
+			os.Exit(1)
 		}
 
-		interpreter.Run()
+		err = interpreter.Run()
+		if err != nil {
+			fmt.Fprint(os.Stderr, err)
+			os.Exit(1)
+		}
 	},
 }
 
 func main() {
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprint(os.Stderr, err)
+		os.Exit(1)
 	}
 }

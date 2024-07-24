@@ -10,9 +10,16 @@ type OpcodeInfo struct {
 }
 
 var opcodes = map[uint8]OpcodeInfo{
+	0x54: {true, false, false, add},
 	0xe0: {true, false, false, call}, // TODO: In V4 Store should equal false
 	0xe1: {false, false, false, storew},
 	0xe2: {false, false, false, storeb},
+}
+
+func add(zmachine *ZMachine, instruction Instruction) {
+	a := instruction.Operands[0].Value
+	b := instruction.Operands[1].Value
+	zmachine.write_variable(a+b, instruction.Store)
 }
 
 func call(zmachine *ZMachine, instruction Instruction) {
