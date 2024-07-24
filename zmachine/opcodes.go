@@ -11,6 +11,7 @@ type OpcodeInfo struct {
 
 var opcodes = map[uint8]OpcodeInfo{
 	0x54: {true, false, false, add},
+	0x61: {false, true, false, je},
 	0x74: {true, false, false, add},
 	0xe0: {true, false, false, call}, // TODO: In V4 Store should equal false
 	0xe1: {false, false, false, storew},
@@ -40,6 +41,27 @@ func call(zmachine *ZMachine, instruction Instruction) {
 	}
 	frame.Counter = next_address
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
+}
+
+func je(zmachine *ZMachine, instruction Instruction) {
+	a := instruction.Operands[0].Value
+	b := instruction.Operands[1].Value
+
+	if instruction.BranchBehavior == BRANCHBEHAVIOR_None {
+		panic("branch with no behavior")
+	}
+
+	if instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnTrue && a == b ||
+		instruction.BranchBehavior == BRANCHBEHAVIOR_BranchOnFalse && a != b {
+		switch instruction.BranchAddress {
+		case 0:
+			panic("unimplemented: branch offset 0")
+		case 1:
+			panic("unimplemented: branch offset 1")
+		default:
+			zmachine.CurrentFrame().Counter = instruction.BranchAddress
+		}
+	}
 }
 
 func storew(zmachine *ZMachine, instruction Instruction) {

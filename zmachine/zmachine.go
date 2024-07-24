@@ -27,11 +27,12 @@ type Address uint16
 
 type Instruction struct {
 	OpcodeInfo
-	Opcode       uint8
-	Operands     []Operand
-	Store        uint8
-	BranchOffset uint16
-	Text         string
+	Opcode         uint8
+	Operands       []Operand
+	Store          uint8
+	BranchAddress  Address
+	BranchBehavior BranchBehavior
+	Text           string
 }
 
 func (instruction Instruction) String() string {
@@ -53,7 +54,7 @@ func (instruction Instruction) String() string {
 	}
 
 	if instruction.PerformsBranch {
-		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.BranchOffset))
+		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.BranchAddress))
 	}
 
 	return strings.Join(log_strings, " ")
@@ -63,6 +64,14 @@ type Operand struct {
 	Type  OpType
 	Value uint16
 }
+
+type BranchBehavior uint8
+
+const (
+	BRANCHBEHAVIOR_None          BranchBehavior = 0
+	BRANCHBEHAVIOR_BranchOnFalse BranchBehavior = 1
+	BRANCHBEHAVIOR_BranchOnTrue  BranchBehavior = 2
+)
 
 type OpType uint8
 
@@ -339,9 +348,31 @@ func (zmachine ZMachine) parse_short_instruction(address Address) (Instruction, 
 		instruction.Store = store
 	}
 
-	// if instruction.PerformsBranch {
-	// 	// TODO: Branches
-	// }
+	if instruction.PerformsBranch {
+		var branch_byte1 uint8
+		branch_byte1, next_address = zmachine.read_byte(next_address)
+
+		if (branch_byte1 >> 7) == 1 {
+			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnTrue
+		} else {
+			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnFalse
+		}
+
+		var offset uint16
+		if (branch_byte1>>6)&0b01 == 1 {
+			offset = uint16(branch_byte1 & 0b00111111)
+		} else {
+			var branch_byte2 uint8
+			branch_byte2, next_address = zmachine.read_byte(next_address)
+			offset = (uint16(branch_byte1&0b00111111) << 8) | uint16(branch_byte2)
+		}
+
+		if offset == 0 || offset == 1 {
+			instruction.BranchAddress = Address(offset)
+		} else {
+			instruction.BranchAddress = Address(uint16(next_address) + offset - 2)
+		}
+	}
 
 	// if instruction.HasText {
 	// 	// TODO: Text
@@ -399,9 +430,31 @@ func (zmachine ZMachine) parse_variable_instruction(address Address) (Instructio
 		instruction.Store = store
 	}
 
-	// if instruction.PerformsBranch {
-	// 	// TODO: Branches
-	// }
+	if instruction.PerformsBranch {
+		var branch_byte1 uint8
+		branch_byte1, next_address = zmachine.read_byte(next_address)
+
+		if (branch_byte1 >> 7) == 1 {
+			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnTrue
+		} else {
+			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnFalse
+		}
+
+		var offset uint16
+		if (branch_byte1>>6)&0b01 == 1 {
+			offset = uint16(branch_byte1 & 0b00111111)
+		} else {
+			var branch_byte2 uint8
+			branch_byte2, next_address = zmachine.read_byte(next_address)
+			offset = (uint16(branch_byte1&0b00111111) << 8) | uint16(branch_byte2)
+		}
+
+		if offset == 0 || offset == 1 {
+			instruction.BranchAddress = Address(offset)
+		} else {
+			instruction.BranchAddress = Address(uint16(next_address) + offset - 2)
+		}
+	}
 
 	// if instruction.HasText {
 	// 	// TODO: Text
@@ -455,9 +508,31 @@ func (zmachine ZMachine) parse_long_instruction(address Address) (Instruction, A
 		instruction.Store = store
 	}
 
-	// if instruction.ShouldBranch {
-	// 	// TODO: Branches
-	// }
+	if instruction.PerformsBranch {
+		var branch_byte1 uint8
+		branch_byte1, next_address = zmachine.read_byte(next_address)
+
+		if (branch_byte1 >> 7) == 1 {
+			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnTrue
+		} else {
+			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnFalse
+		}
+
+		var offset uint16
+		if (branch_byte1>>6)&0b01 == 1 {
+			offset = uint16(branch_byte1 & 0b00111111)
+		} else {
+			var branch_byte2 uint8
+			branch_byte2, next_address = zmachine.read_byte(next_address)
+			offset = (uint16(branch_byte1&0b00111111) << 8) | uint16(branch_byte2)
+		}
+
+		if offset == 0 || offset == 1 {
+			instruction.BranchAddress = Address(offset)
+		} else {
+			instruction.BranchAddress = Address(uint16(next_address) + offset - 2)
+		}
+	}
 
 	// if instruction.HasText {
 	// 	// TODO: Text
