@@ -55,26 +55,41 @@ type Instruction struct {
 	Text          string
 }
 
-func (instruction Instruction) String() string {
-	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf("%x", instruction.Opcode))
-	builder.WriteString(" - ")
+func get_variable_string(value uint16) string {
+	if value == 0 {
+		return "sp"
+	} else if value <= 0x10 {
+		return fmt.Sprintf("local%d", value-1)
+	} else {
+		return fmt.Sprintf("g%d", value-0x10)
+	}
+}
 
+func (instruction Instruction) String() string {
 	function_path := strings.Split(runtime.FuncForPC(reflect.ValueOf(instruction.Handler).Pointer()).Name(), ".")
 	operation_name := strings.ToUpper(function_path[len(function_path)-1])
 
 	log_strings := make([]string, 0, len(instruction.OperandValues)+4)
-	log_strings = append(log_strings, fmt.Sprintf("%s(%x)", operation_name, instruction.Opcode))
-	for _, operand := range instruction.OperandValues {
-		log_strings = append(log_strings, fmt.Sprintf("$%x", operand))
+	log_strings = append(log_strings, fmt.Sprintf("%02x %s", instruction.Opcode, operation_name))
+	for i, operand := range instruction.OperandValues {
+		optype := instruction.OperandTypes[i]
+		if optype == OT_Variable {
+			log_strings = append(log_strings, get_variable_string(operand))
+		} else {
+			log_strings = append(log_strings, fmt.Sprintf("%x", operand))
+		}
 	}
 
 	if instruction.StoresResult() {
-		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.StoreVariable))
+		log_strings = append(log_strings, fmt.Sprintf("-> %s", get_variable_string(uint16(instruction.StoreVariable))))
 	}
 
 	if instruction.Branches() {
-		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.Branch.Address))
+		not := ""
+		if instruction.Branch.Condition == BC_OnFalse {
+			not = "~"
+		}
+		log_strings = append(log_strings, fmt.Sprintf("?%s%x", not, instruction.Branch.Address))
 	}
 
 	return strings.Join(log_strings, " ")
@@ -269,7 +284,7 @@ func (zmachine *ZMachine) read_variable(index uint8) uint16 {
 		value := frame.Stack[len(frame.Stack)-1]
 		frame.Stack = frame.Stack[:len(frame.Stack)-1]
 		return value
-	} else if index > 0 && index < 0x10 {
+	} else if index < 0x10 {
 		// Local variable
 		frame := zmachine.CurrentFrame()
 		return frame.Locals[index-1]
