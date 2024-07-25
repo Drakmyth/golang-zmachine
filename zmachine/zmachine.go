@@ -3,11 +3,11 @@ package zmachine
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -25,14 +25,34 @@ type StackFrame struct {
 
 type Address uint16
 
+type BranchBehavior uint8
+
+const (
+	BB_Normal      BranchBehavior = 0
+	BB_ReturnFalse BranchBehavior = 1
+	BB_ReturnTrue  BranchBehavior = 2
+)
+
+type BranchCondition uint8
+
+const (
+	BC_OnFalse BranchCondition = 0
+	BC_OnTrue  BranchCondition = 1
+)
+
+type Branch struct {
+	Address   Address
+	Behavior  BranchBehavior
+	Condition BranchCondition
+}
+
 type Instruction struct {
-	OpcodeInfo
-	Opcode         uint8
-	Operands       []Operand
-	Store          uint8
-	BranchAddress  Address
-	BranchBehavior BranchBehavior
-	Text           string
+	InstructionInfo
+	Opcode        uint8
+	OperandValues []uint16
+	StoreVariable uint8
+	Branch        Branch
+	Text          string
 }
 
 func (instruction Instruction) String() string {
@@ -43,55 +63,30 @@ func (instruction Instruction) String() string {
 	function_path := strings.Split(runtime.FuncForPC(reflect.ValueOf(instruction.Handler).Pointer()).Name(), ".")
 	operation_name := strings.ToUpper(function_path[len(function_path)-1])
 
-	log_strings := make([]string, 0, len(instruction.Operands)+4)
+	log_strings := make([]string, 0, len(instruction.OperandValues)+4)
 	log_strings = append(log_strings, fmt.Sprintf("%s(%x)", operation_name, instruction.Opcode))
-	for _, operand := range instruction.Operands {
-		log_strings = append(log_strings, fmt.Sprintf("$%x", operand.Value))
+	for _, operand := range instruction.OperandValues {
+		log_strings = append(log_strings, fmt.Sprintf("$%x", operand))
 	}
 
-	if instruction.PerformsStore {
-		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.Store))
+	if instruction.StoresResult() {
+		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.StoreVariable))
 	}
 
-	if instruction.PerformsBranch {
-		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.BranchAddress))
+	if instruction.Branches() {
+		log_strings = append(log_strings, fmt.Sprintf("$%x", instruction.Branch.Address))
 	}
 
 	return strings.Join(log_strings, " ")
 }
 
-type Operand struct {
-	Type  OpType
-	Value uint16
-}
-
-func (zmachine ZMachine) get_operand_value(operand Operand) uint16 {
-	switch operand.Type {
-	case OPTYPE_Omitted:
-		return 0
-	case OPTYPE_Variable:
-		return zmachine.read_variable(uint8(operand.Value))
-	default:
-		return operand.Value
+func (zmachine ZMachine) get_operand_value(instruction Instruction, index int) uint16 {
+	if instruction.OperandTypes[index] == OT_Variable {
+		return zmachine.read_variable(uint8(instruction.OperandValues[index]))
 	}
+
+	return instruction.OperandValues[index]
 }
-
-type BranchBehavior uint8
-
-const (
-	BRANCHBEHAVIOR_None          BranchBehavior = 0
-	BRANCHBEHAVIOR_BranchOnFalse BranchBehavior = 1
-	BRANCHBEHAVIOR_BranchOnTrue  BranchBehavior = 2
-)
-
-type OpType uint8
-
-const (
-	OPTYPE_LargeConst OpType = 0 // 2 bytes
-	OPTYPE_SmallConst OpType = 1 // 1 byte
-	OPTYPE_Variable   OpType = 2 // 1 byte
-	OPTYPE_Omitted    OpType = 3 // 0 byte
-)
 
 const FLAGS1_None uint8 = 0
 const (
@@ -227,28 +222,19 @@ func (zmachine ZMachine) Run() error {
 func (zmachine *ZMachine) execute_next_instruction() error {
 	frame := zmachine.CurrentFrame()
 	pc := frame.Counter
-	opcode, _ := zmachine.read_byte(pc)
 
-	var instruction Instruction
-	var next_address Address
-	var err error
-	if is_short_instruction(opcode) {
-		instruction, next_address, err = zmachine.parse_short_instruction(pc)
-	} else if is_variable_instruction(opcode) {
-		instruction, next_address, err = zmachine.parse_variable_instruction(pc)
-	} else if is_extended_instruction(opcode, zmachine.Header.Version) {
-		instruction, next_address, err = zmachine.parse_extended_instruction(pc)
-	} else {
-		instruction, next_address, err = zmachine.parse_long_instruction(pc)
-	}
-
+	instruction, next_address, err := zmachine.parse_instruction(pc)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("%x: %s\n", pc, instruction)
 
-	counter_updated := instruction.Handler(zmachine, instruction)
+	counter_updated, err := instruction.Handler(zmachine, instruction)
+	if err != nil {
+		return err
+	}
+
 	if !counter_updated {
 		frame.Counter = next_address
 	}
@@ -308,25 +294,25 @@ func (zmachine *ZMachine) write_variable(value uint16, index uint8) {
 	}
 }
 
-func (zmachine ZMachine) read_zstring(address Address) {
-	words := make([]uint16, 0)
-	zstr_word, next_address := zmachine.read_word(address)
-	words = append(words, zstr_word)
+// func (zmachine ZMachine) read_zstring(address Address) {
+// 	words := make([]uint16, 0)
+// 	zstr_word, next_address := zmachine.read_word(address)
+// 	words = append(words, zstr_word)
 
-	for zstr_word>>15 == 0 {
-		zstr_word, next_address = zmachine.read_word(next_address)
-		words = append(words, zstr_word)
-	}
+// 	for zstr_word>>15 == 0 {
+// 		zstr_word, next_address = zmachine.read_word(next_address)
+// 		words = append(words, zstr_word)
+// 	}
 
-	zchars := make([]uint8, 0, len(words)*3)
-	for _, word := range words {
-		zchars = append(zchars, uint8((word>>10)&0b11111))
-		zchars = append(zchars, uint8((word>>5)&0b11111))
-		zchars = append(zchars, uint8(word&0b11111))
-	}
+// 	zchars := make([]uint8, 0, len(words)*3)
+// 	for _, word := range words {
+// 		zchars = append(zchars, uint8((word>>10)&0b11111))
+// 		zchars = append(zchars, uint8((word>>5)&0b11111))
+// 		zchars = append(zchars, uint8(word&0b11111))
+// 	}
 
-	print("temp")
-}
+// 	print("temp")
+// }
 
 func (zmachine ZMachine) get_routine_address(address Address) Address {
 	switch zmachine.Header.Version {
@@ -343,232 +329,77 @@ func (zmachine ZMachine) get_routine_address(address Address) Address {
 	panic("Unknown version")
 }
 
-func is_short_instruction(opcode uint8) bool {
-	return opcode>>6 == 0b10
-}
-
-func (zmachine ZMachine) parse_short_instruction(address Address) (Instruction, Address, error) {
+func (zmachine ZMachine) parse_instruction(address Address) (Instruction, Address, error) {
 	opcode, next_address := zmachine.read_byte(address)
-	opinfo, ok := opcodes[opcode]
+	inst_info, ok := opcodes[opcode]
 	if !ok {
 		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
 	}
-	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
+	instruction := Instruction{InstructionInfo: inst_info, Opcode: opcode}
 
-	optype := OpType((opcode & 0b00110000) >> 4)
-	var operand_value uint16
-	if optype != OPTYPE_Omitted {
-		// 1OP
-		if optype == OPTYPE_LargeConst {
-			operand_value, next_address = zmachine.read_word(next_address)
-		} else {
-			var byte uint8
-			byte, next_address = zmachine.read_byte(next_address)
-			operand_value = uint16(byte)
-		}
-
-		instruction.Operands = append(instruction.Operands, Operand{
-			Type:  optype,
-			Value: operand_value,
-		})
-	} else {
-		// 0OP
+	if instruction.Form == IF_Extended {
+		return Instruction{}, 0, fmt.Errorf("unimplemented: extended form instruction")
 	}
 
-	if instruction.PerformsStore {
-		var store uint8
-		store, next_address = zmachine.read_byte(next_address)
-		instruction.Store = store
+	// Determine Variable Form operand types
+	if instruction.Form == IF_Variable {
+		var types_byte uint8
+		types_byte, next_address = zmachine.read_byte(next_address)
+
+		for shift := 0; shift <= 6; shift += 2 {
+			operand_type := OperandType((types_byte >> shift) & 0b11)
+			if operand_type != OT_Omitted {
+				instruction.OperandTypes = append(instruction.OperandTypes, operand_type)
+				// Types are parsed last to first, so we need to reverse them
+				slices.Reverse(instruction.OperandTypes)
+			}
+		}
 	}
 
-	if instruction.PerformsBranch {
-		var branch_byte1 uint8
-		branch_byte1, next_address = zmachine.read_byte(next_address)
-
-		if (branch_byte1 >> 7) == 1 {
-			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnTrue
+	// Parse Operands
+	instruction.OperandValues = make([]uint16, 0, len(instruction.OperandTypes))
+	for _, optype := range instruction.OperandTypes {
+		var opvalue uint16
+		if optype == OT_Large {
+			opvalue, next_address = zmachine.read_word(next_address)
 		} else {
-			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnFalse
+			var value_byte uint8
+			value_byte, next_address = zmachine.read_byte(next_address)
+			opvalue = uint16(value_byte)
 		}
+		instruction.OperandValues = append(instruction.OperandValues, opvalue)
+	}
+
+	if instruction.StoresResult() {
+		var store_byte uint8
+		store_byte, next_address = zmachine.read_byte(next_address)
+		instruction.StoreVariable = store_byte
+	}
+
+	if instruction.Branches() {
+		var branch_byte uint8
+		branch_byte, next_address = zmachine.read_byte(next_address)
+		instruction.Branch.Behavior = BranchBehavior(branch_byte >> 7)
 
 		var offset uint16
-		if (branch_byte1>>6)&0b01 == 1 {
-			offset = uint16(branch_byte1 & 0b00111111)
-		} else {
-			var branch_byte2 uint8
-			branch_byte2, next_address = zmachine.read_byte(next_address)
-			offset = (uint16(branch_byte1&0b00111111) << 8) | uint16(branch_byte2)
+		offset = uint16(branch_byte & 0b00111111)
+		if ((branch_byte >> 6) & 0b01) == 0 {
+			branch_byte, next_address = zmachine.read_byte(next_address)
+			offset = (offset << 8) | uint16(branch_byte)
 		}
 
-		if offset == 0 || offset == 1 {
-			instruction.BranchAddress = Address(offset)
-		} else {
-			instruction.BranchAddress = Address(uint16(next_address) + offset - 2)
-		}
-	}
-
-	// if instruction.HasText {
-	// 	// TODO: Text
-	// }
-
-	return instruction, next_address, nil
-}
-
-func is_variable_instruction(opcode uint8) bool {
-	return opcode>>6 == 0b11
-}
-
-func (zmachine ZMachine) parse_variable_instruction(address Address) (Instruction, Address, error) {
-	opcode, next_address := zmachine.read_byte(address)
-	opinfo, ok := opcodes[opcode]
-	if !ok {
-		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
-	}
-	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
-
-	// if (opcode&0b00100000)>>5 == 1 {
-	var byte uint8
-	byte, next_address = zmachine.read_byte(next_address)
-
-	optype4 := OpType(byte & 0b11)
-	optype3 := OpType((byte >> 2) & 0b11)
-	optype2 := OpType((byte >> 4) & 0b11)
-	optype1 := OpType((byte >> 6) & 0b11)
-
-	// TODO: Version 4 and 5 support call_vn2 and call_vs2 which read a second type byte
-	types := []OpType{optype1, optype2, optype3, optype4}
-	for _, optype := range types {
-		if optype == OPTYPE_Omitted {
-			break
-		}
-
-		operand := Operand{Type: optype}
-
-		var operand_value uint16
-		if optype == OPTYPE_LargeConst {
-			operand_value, next_address = zmachine.read_word(next_address)
-		} else {
-			byte, next_address = zmachine.read_byte(next_address)
-			operand_value = uint16(byte)
-		}
-
-		operand.Value = operand_value
-		instruction.Operands = append(instruction.Operands, operand)
-	}
-	// }
-
-	if instruction.PerformsStore {
-		var store uint8
-		store, next_address = zmachine.read_byte(next_address)
-		instruction.Store = store
-	}
-
-	if instruction.PerformsBranch {
-		var branch_byte1 uint8
-		branch_byte1, next_address = zmachine.read_byte(next_address)
-
-		if (branch_byte1 >> 7) == 1 {
-			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnTrue
-		} else {
-			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnFalse
-		}
-
-		var offset uint16
-		if (branch_byte1>>6)&0b01 == 1 {
-			offset = uint16(branch_byte1 & 0b00111111)
-		} else {
-			var branch_byte2 uint8
-			branch_byte2, next_address = zmachine.read_byte(next_address)
-			offset = (uint16(branch_byte1&0b00111111) << 8) | uint16(branch_byte2)
-		}
-
-		if offset == 0 || offset == 1 {
-			instruction.BranchAddress = Address(offset)
-		} else {
-			instruction.BranchAddress = Address(uint16(next_address) + offset - 2)
+		switch offset {
+		case 0:
+			instruction.Branch.Behavior = BB_ReturnFalse
+		case 1:
+			instruction.Branch.Behavior = BB_ReturnTrue
+		default:
+			instruction.Branch.Address = Address(uint16(next_address) + offset - 2)
 		}
 	}
 
-	// if instruction.HasText {
-	// 	// TODO: Text
-	// }
-
-	return instruction, next_address, nil
-}
-
-func is_extended_instruction(opcode uint8, version uint8) bool {
-	return opcode == 0xBE && version >= 5
-}
-
-func (zmachine ZMachine) parse_extended_instruction(address Address) (Instruction, Address, error) {
-	return Instruction{}, 0, errors.New("unimplemented: extended instruction parsing")
-}
-
-func (zmachine ZMachine) parse_long_instruction(address Address) (Instruction, Address, error) {
-	opcode, next_address := zmachine.read_byte(address)
-	opinfo, ok := opcodes[opcode]
-	if !ok {
-		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
-	}
-	instruction := Instruction{OpcodeInfo: opinfo, Opcode: opcode}
-
-	optype1 := OPTYPE_SmallConst
-	if (opcode&0b01000000)>>6 == 1 {
-		optype1 = OPTYPE_Variable
-	}
-
-	var byte uint8
-	byte, next_address = zmachine.read_byte(next_address)
-	instruction.Operands = append(instruction.Operands, Operand{
-		Type:  optype1,
-		Value: uint16(byte),
-	})
-
-	optype2 := OPTYPE_SmallConst
-	if (opcode&0b00100000)>>5 == 1 {
-		optype2 = OPTYPE_Variable
-	}
-
-	byte, next_address = zmachine.read_byte(next_address)
-	instruction.Operands = append(instruction.Operands, Operand{
-		Type:  optype2,
-		Value: uint16(byte),
-	})
-
-	if instruction.PerformsStore {
-		var store uint8
-		store, next_address = zmachine.read_byte(next_address)
-		instruction.Store = store
-	}
-
-	if instruction.PerformsBranch {
-		var branch_byte1 uint8
-		branch_byte1, next_address = zmachine.read_byte(next_address)
-
-		if (branch_byte1 >> 7) == 1 {
-			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnTrue
-		} else {
-			instruction.BranchBehavior = BRANCHBEHAVIOR_BranchOnFalse
-		}
-
-		var offset uint16
-		if (branch_byte1>>6)&0b01 == 1 {
-			offset = uint16(branch_byte1 & 0b00111111)
-		} else {
-			var branch_byte2 uint8
-			branch_byte2, next_address = zmachine.read_byte(next_address)
-			offset = (uint16(branch_byte1&0b00111111) << 8) | uint16(branch_byte2)
-		}
-
-		if offset == 0 || offset == 1 {
-			instruction.BranchAddress = Address(offset)
-		} else {
-			instruction.BranchAddress = Address(uint16(next_address) + offset - 2)
-		}
-	}
-
-	// if instruction.HasText {
-	// 	// TODO: Text
+	// if instruction.HasText() {
+	//     // TODO: Implement text handling
 	// }
 
 	return instruction, next_address, nil
