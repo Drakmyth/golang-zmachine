@@ -17,6 +17,7 @@ var opcodes = map[uint8]OpcodeInfo{
 	0x61: {false, true, false, je},
 	0x74: {true, false, false, add},
 	0x86: {false, false, false, dec},
+	// 0x87: {false, false, false, print_addr},
 	0x8c: {false, false, false, jump},
 	0xa0: {false, true, false, jz},
 	0xe0: {true, false, false, call}, // TODO: In V4 Store should equal false
@@ -157,6 +158,12 @@ func loadw(zmachine *ZMachine, instruction Instruction) bool {
 	word_index := zmachine.get_operand_value(instruction.Operands[1])
 	value, _ := zmachine.read_word(Address(array + 2*word_index))
 	zmachine.write_variable(value, instruction.Store)
+	return false
+}
+
+func print_addr(zmachine *ZMachine, instruction Instruction) bool {
+	address := Address(zmachine.get_operand_value(instruction.Operands[0]))
+	zmachine.read_zstring(address)
 	return false
 }
 
