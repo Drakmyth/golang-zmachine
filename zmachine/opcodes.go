@@ -2,11 +2,54 @@ package zmachine
 
 type InstructionHandler func(*ZMachine, Instruction) bool
 
-type OpcodeInfo struct {
-	PerformsStore  bool
-	PerformsBranch bool
-	HasText        bool
-	Handler        InstructionHandler
+type InstructionForm uint8
+
+const (
+	IF_Short    InstructionForm = 0
+	IF_Long     InstructionForm = 1
+	IF_Variable InstructionForm = 2
+	IF_Extended InstructionForm = 3
+)
+
+type OperandType uint8
+
+const (
+	OT_Large    OperandType = 0
+	OT_Small    OperandType = 1
+	OT_Variable OperandType = 2
+	OT_Omitted  OperandType = 3
+)
+
+type InstructionMeta uint8
+
+const (
+	IM_None   = 0
+	IM_Store  = 1
+	IM_Branch = 2
+	IM_Text   = 4
+)
+
+type Instruction2 struct {
+	Form         InstructionForm
+	Meta         InstructionMeta
+	OperandTypes []OperandType
+	Handler      InstructionHandler
+}
+
+var opcodes2 = map[uint8]Instruction2{
+	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
+	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
+	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
+	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
+	0x61: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, je},
+	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
+	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
+	// 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
+	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
+	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
+	0xe0: {IF_Variable, IM_Store, []OperandType{}, call}, // TODO: In V4 Store should equal false
+	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
+	0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
 }
 
 var opcodes = map[uint8]OpcodeInfo{
