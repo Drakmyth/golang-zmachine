@@ -287,7 +287,7 @@ func (zmachine *ZMachine) read_variable(index uint8) uint16 {
 	} else if index < 0x10 {
 		// Local variable
 		frame := zmachine.CurrentFrame()
-		return frame.Locals[index-1]
+		return frame.Locals[index]
 	} else {
 		// Global variable
 		value, _ := zmachine.read_word(Address(uint16(zmachine.Header.GlobalsAddr) + uint16(index-0x10)))

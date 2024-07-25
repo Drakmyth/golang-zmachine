@@ -1,6 +1,8 @@
 package zmachine
 
-import "errors"
+import (
+	"errors"
+)
 
 type InstructionHandler func(*ZMachine, Instruction) (bool, error)
 
@@ -84,6 +86,7 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	routineAddr := zmachine.get_routine_address(packed_address)
 	num_locals, next_address := zmachine.read_byte(routineAddr)
 	frame := StackFrame{}
+	frame.Locals = make([]uint16, 0, num_locals)
 	for range num_locals {
 		var local uint16
 		if zmachine.Header.Version < 5 {
@@ -97,6 +100,7 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	for i := 0; i < min(int(num_locals), len(instruction.OperandValues)-1); i++ {
 		frame.Locals[i] = zmachine.get_operand_value(instruction, i+1)
 	}
+
 	frame.Counter = next_address
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
 	return false, nil // Return false because the previous frame hasn't been updated yet even though there is a new frame
