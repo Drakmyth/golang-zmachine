@@ -53,8 +53,8 @@ func call(zmachine *ZMachine, instruction Instruction) bool {
 		frame.Locals = append(frame.Locals, local)
 	}
 
-	for i := 0; i < min(int(num_locals), len(instruction.Operands)); i++ {
-		frame.Locals[i] = zmachine.get_operand_value(instruction.Operands[i])
+	for i := 0; i < min(int(num_locals), len(instruction.Operands)-1); i++ {
+		frame.Locals[i] = zmachine.get_operand_value(instruction.Operands[i+1])
 	}
 	frame.Counter = next_address
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
