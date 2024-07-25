@@ -63,7 +63,7 @@ var opcodes = map[uint8]InstructionInfo{
 	// 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
-	0xe0: {IF_Variable, IM_Store, []OperandType{}, call}, // TODO: In V4 Store should equal false
+	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
 }
@@ -76,8 +76,6 @@ func add(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	// TODO: This probably isn't implemented completely correctly. There isn't really a way to return from a call right now...
-	// TODO: Need to store return value via `zmachine.write_variable(value, instruction.Store)`
 	packed_address := Address(zmachine.get_operand_value(instruction, 0))
 	if packed_address == 0 {
 		return false, errors.New("unimplemented: call address 0")
@@ -102,6 +100,12 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	}
 
 	frame.Counter = next_address
+
+	frame.DiscardReturn = !instruction.StoresResult()
+	if instruction.StoresResult() {
+		frame.ReturnVariable = instruction.StoreVariable
+	}
+
 	zmachine.StackFrames = append(zmachine.StackFrames, frame)
 	return false, nil // Return false because the previous frame hasn't been updated yet even though there is a new frame
 }
@@ -131,9 +135,9 @@ func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 			zmachine.CurrentFrame().Counter = instruction.Branch.Address
 			return true, nil
 		case BB_ReturnFalse:
-			return false, errors.New("unimplemented: branch return false")
+			zmachine.end_current_frame(0)
 		case BB_ReturnTrue:
-			return false, errors.New("unimplemented: branch return true")
+			zmachine.end_current_frame(1)
 		}
 	}
 
@@ -151,9 +155,9 @@ func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 			zmachine.CurrentFrame().Counter = instruction.Branch.Address
 			return true, nil
 		case BB_ReturnFalse:
-			return false, errors.New("unimplemented: branch return false")
+			zmachine.end_current_frame(0)
 		case BB_ReturnTrue:
-			return false, errors.New("unimplemented: branch return true")
+			zmachine.end_current_frame(1)
 		}
 	}
 
@@ -177,9 +181,9 @@ func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 			zmachine.CurrentFrame().Counter = instruction.Branch.Address
 			return true, nil
 		case BB_ReturnFalse:
-			return false, errors.New("unimplemented: branch return false")
+			zmachine.end_current_frame(0)
 		case BB_ReturnTrue:
-			return false, errors.New("unimplemented: branch return true")
+			zmachine.end_current_frame(1)
 		}
 	}
 

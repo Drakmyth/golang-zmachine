@@ -18,9 +18,11 @@ type ZMachine struct {
 }
 
 type StackFrame struct {
-	Counter Address
-	Stack   []uint16
-	Locals  []uint16
+	Counter        Address
+	Stack          []uint16
+	Locals         []uint16
+	DiscardReturn  bool
+	ReturnVariable uint8
 }
 
 type Address uint16
@@ -101,6 +103,14 @@ func (zmachine ZMachine) get_operand_value(instruction Instruction, index int) u
 	}
 
 	return instruction.OperandValues[index]
+}
+
+func (zmachine *ZMachine) end_current_frame(value uint16) {
+	frame := zmachine.CurrentFrame()
+	if !frame.DiscardReturn {
+		zmachine.write_variable(value, frame.ReturnVariable)
+	}
+	zmachine.StackFrames = zmachine.StackFrames[:len(zmachine.StackFrames)-1]
 }
 
 const FLAGS1_None uint8 = 0
@@ -394,7 +404,7 @@ func (zmachine ZMachine) parse_instruction(address Address) (Instruction, Addres
 	if instruction.Branches() {
 		var branch_byte uint8
 		branch_byte, next_address = zmachine.read_byte(next_address)
-		instruction.Branch.Behavior = BranchBehavior(branch_byte >> 7)
+		instruction.Branch.Condition = BranchCondition(branch_byte >> 7)
 
 		var offset uint16
 		offset = uint16(branch_byte & 0b00111111)
