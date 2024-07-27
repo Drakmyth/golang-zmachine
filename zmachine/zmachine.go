@@ -158,14 +158,13 @@ func (zmachine ZMachine) Run() error {
 
 func (zmachine *ZMachine) executeNextInstruction() error {
 	frame := zmachine.StackFrames.peek()
-	pc := frame.Counter
 
-	instruction, next_address, err := zmachine.readInstruction(pc)
+	instruction, next_address, err := zmachine.readInstruction(frame.Counter)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%x: %s\n", pc, instruction)
+	fmt.Printf("%x: %s\n", frame.Counter, instruction)
 
 	for i, optype := range instruction.OperandTypes {
 		if optype != OT_Variable {
@@ -227,7 +226,7 @@ func (zmachine ZMachine) readInstruction(address Address) (Instruction, Address,
 	if !ok {
 		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
 	}
-	instruction := Instruction{InstructionInfo: inst_info, Opcode: opcode}
+	instruction := Instruction{InstructionInfo: inst_info, Opcode: opcode, Address: address}
 
 	if instruction.Form == IF_Extended {
 		return Instruction{}, 0, fmt.Errorf("unimplemented: extended form instruction")
@@ -272,5 +271,6 @@ func (zmachine ZMachine) readInstruction(address Address) (Instruction, Address,
 	//     // TODO: Implement text handling
 	// }
 
+	instruction.NextAddress = next_address
 	return instruction, next_address, nil
 }

@@ -127,7 +127,7 @@ func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	offset := instruction.Operands[0].asInt()
 
 	frame := zmachine.StackFrames.peek()
-	frame.Counter = frame.Counter.offsetBytes(offset)
+	frame.Counter = instruction.NextAddress.offsetBytes(offset - 2)
 	return true, nil
 }
 

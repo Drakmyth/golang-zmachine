@@ -57,6 +57,8 @@ func (info InstructionInfo) HasText() bool {
 
 type Instruction struct {
 	InstructionInfo
+	Address       Address
+	NextAddress   Address
 	Opcode        Opcode
 	Operands      []Operand
 	StoreVariable VarNum
