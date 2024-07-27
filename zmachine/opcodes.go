@@ -11,7 +11,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
 	0x61: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, je},
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
-	// 0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
+	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
 	// // 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
@@ -93,15 +93,15 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return false, nil // Return false because the previous frame hasn't been updated yet even though there is a new frame
 }
 
-// func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
-// 	variable := uint8(zmachine.get_operand_value(instruction, 0))
+func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	variable := instruction.Operands[0].asVarNum()
 
-// 	variable_value := zmachine.read_variable(variable)
-// 	variable_value--
-// 	zmachine.write_variable(variable_value, variable)
+	variable_value := zmachine.readVariable(variable)
+	variable_value--
+	zmachine.writeVariable(variable_value, variable)
 
-// 	return false, nil
-// }
+	return false, nil
+}
 
 func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := instruction.Operands[0].asVarNum()
