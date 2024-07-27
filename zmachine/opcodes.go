@@ -15,6 +15,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	// // 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
 	// 0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
+	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
@@ -163,11 +164,18 @@ func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // 	return false, nil
 // }
 
-// // func print_addr(zmachine *ZMachine, instruction Instruction) bool {
-// // 	address := Address(zmachine.get_operand_value(instruction.OperandValues[0]))
-// // 	zmachine.read_zstring(address)
-// // 	return false
-// // }
+// func print_addr(zmachine *ZMachine, instruction Instruction) bool {
+// 	address := Address(zmachine.get_operand_value(instruction.OperandValues[0]))
+// 	zmachine.read_zstring(address)
+// 	return false
+// }
+
+func ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	value := instruction.Operands[0].asWord()
+
+	zmachine.endCurrentFrame(value)
+	return true, nil
+}
 
 func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	array := instruction.Operands[0].asAddress()
