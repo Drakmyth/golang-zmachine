@@ -97,6 +97,8 @@ func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := instruction.Operands[0].asVarNum()
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
+	// Is this actually a problem? It will pop it off, but then push it right back on.
+	// The address will change potentially, but does that matter?
 	variable_value := zmachine.readVariable(variable)
 	variable_value--
 	zmachine.writeVariable(variable_value, variable)
@@ -109,6 +111,8 @@ func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := instruction.Operands[1].asWord()
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
+	// Is this actually a problem? It will pop it off, but then push it right back on.
+	// The address will change potentially, but does that matter?
 	variable_value := zmachine.readVariable(variable)
 	variable_value--
 	zmachine.writeVariable(variable_value, variable)
