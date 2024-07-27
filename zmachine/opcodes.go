@@ -5,7 +5,7 @@ import "errors"
 type Opcode uint16
 
 var opcodes = map[Opcode]InstructionInfo{
-	// 0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
+	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
@@ -31,6 +31,23 @@ func (zmachine ZMachine) readOpcode(address Address) (Opcode, Address) {
 	}
 
 	return Opcode(opcode), next_address
+}
+
+func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
+	if branch.Condition == BC_OnTrue && condition ||
+		branch.Condition == BC_OnFalse && !condition {
+		switch branch.Behavior {
+		case BB_Normal:
+			zmachine.StackFrames[0].Counter = branch.Address
+			return true
+		case BB_ReturnFalse:
+			zmachine.endCurrentFrame(0)
+		case BB_ReturnTrue:
+			zmachine.endCurrentFrame(1)
+		}
+	}
+
+	return false
 }
 
 func add(zmachine *ZMachine, instruction Instruction) (bool, error) {
@@ -86,48 +103,22 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // 	return false, nil
 // }
 
-// func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
-// 	variable := uint8(zmachine.get_operand_value(instruction, 0))
-// 	value := zmachine.get_operand_value(instruction, 1)
+func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	variable := instruction.Operands[0].asVarNum()
+	value := instruction.Operands[1].asWord()
 
-// 	variable_value := zmachine.read_variable(variable)
-// 	variable_value--
-// 	zmachine.write_variable(variable_value, variable)
+	variable_value := zmachine.readVariable(variable)
+	variable_value--
+	zmachine.writeVariable(variable_value, variable)
 
-// 	if instruction.Branch.Condition == BC_OnTrue && variable_value < value ||
-// 		instruction.Branch.Condition == BC_OnFalse && variable_value >= value {
-// 		switch instruction.Branch.Behavior {
-// 		case BB_Normal:
-// 			zmachine.CurrentFrame().Counter = instruction.Branch.Address
-// 			return true, nil
-// 		case BB_ReturnFalse:
-// 			zmachine.end_current_frame(0)
-// 		case BB_ReturnTrue:
-// 			zmachine.end_current_frame(1)
-// 		}
-// 	}
-
-// 	return false, nil
-// }
+	return zmachine.performBranch(instruction.Branch, variable_value < value), nil
+}
 
 func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
 
-	if instruction.Branch.Condition == BC_OnTrue && a == b ||
-		instruction.Branch.Condition == BC_OnFalse && a != b {
-		switch instruction.Branch.Behavior {
-		case BB_Normal:
-			zmachine.StackFrames[0].Counter = instruction.Branch.Address
-			return true, nil
-		case BB_ReturnFalse:
-			zmachine.endCurrentFrame(0)
-		case BB_ReturnTrue:
-			zmachine.endCurrentFrame(1)
-		}
-	}
-
-	return false, nil
+	return zmachine.performBranch(instruction.Branch, a == b), nil
 }
 
 func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
@@ -141,20 +132,7 @@ func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 
-	if instruction.Branch.Condition == BC_OnTrue && a == 0 ||
-		instruction.Branch.Condition == BC_OnFalse && a != 0 {
-		switch instruction.Branch.Behavior {
-		case BB_Normal:
-			zmachine.StackFrames[0].Counter = instruction.Branch.Address
-			return true, nil
-		case BB_ReturnFalse:
-			zmachine.endCurrentFrame(0)
-		case BB_ReturnTrue:
-			zmachine.endCurrentFrame(1)
-		}
-	}
-
-	return false, nil
+	return zmachine.performBranch(instruction.Branch, a == 0), nil
 }
 
 func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
