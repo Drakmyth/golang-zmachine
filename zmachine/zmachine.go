@@ -23,11 +23,10 @@ type StackFrame struct {
 }
 
 func (zmachine *ZMachine) endCurrentFrame(value word) {
-	frame := zmachine.StackFrames[0]
+	frame := zmachine.StackFrames.pop()
 	if !frame.DiscardReturn {
 		zmachine.writeVariable(value, frame.ReturnVariable)
 	}
-	zmachine.StackFrames.pop()
 }
 
 // const FLAGS1_None uint8 = 0
@@ -158,7 +157,7 @@ func (zmachine ZMachine) Run() error {
 }
 
 func (zmachine *ZMachine) executeNextInstruction() error {
-	frame := &zmachine.StackFrames[0]
+	frame := zmachine.StackFrames.peek()
 	pc := frame.Counter
 
 	instruction, next_address, err := zmachine.readInstruction(pc)
@@ -243,10 +242,10 @@ func (zmachine ZMachine) readInstruction(address Address) (Instruction, Address,
 			operand_type := OperandType((types_byte >> shift) & 0b11)
 			if operand_type != OT_Omitted {
 				instruction.OperandTypes = append(instruction.OperandTypes, operand_type)
-				// Types are parsed last to first, so we need to reverse them
-				slices.Reverse(instruction.OperandTypes)
 			}
 		}
+		// Types are parsed last to first, so we need to reverse them
+		slices.Reverse(instruction.OperandTypes)
 	}
 
 	// Parse Operands

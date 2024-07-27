@@ -1,6 +1,7 @@
 package zmachine
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -10,10 +11,7 @@ func TestStack_push(t *testing.T) {
 	data := []int{5, 7, 2}
 	for _, val := range data {
 		stack.push(val)
-	}
-
-	for i, val := range stack {
-		assertEqual(t, data[len(data)-1-i], val)
+		assertEqual(t, val, *stack.peek())
 	}
 }
 
@@ -21,13 +19,17 @@ func TestStack_pop(t *testing.T) {
 	data := []int{5, 7, 2}
 	stack := Stack[int]{data[0], data[1], data[2]}
 
-	val := stack.pop()
-
-	assertEqual(t, data[0], val)
-
-	for i, val2 := range stack {
-		if data[i+1] != val2 {
-			t.Fatalf("got: %v, expected %v", stack, data[1:])
-		}
+	slices.Reverse(data)
+	for _, expected := range data {
+		val := stack.pop()
+		assertEqual(t, expected, val)
 	}
+}
+
+func TestStack_peek(t *testing.T) {
+	data := []int{5, 7, 2}
+	stack := Stack[int]{data[0], data[1], data[2]}
+
+	assertEqual(t, data[2], *stack.peek())
+	assertEqual(t, 3, len(stack))
 }

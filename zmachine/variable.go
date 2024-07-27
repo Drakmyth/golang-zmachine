@@ -51,9 +51,9 @@ func (zmachine *ZMachine) setGlobal(value word, index int) {
 
 func (zmachine ZMachine) readVariable(index VarNum) word {
 	if index == 0 {
-		return zmachine.StackFrames[0].Stack.pop()
+		return zmachine.StackFrames.peek().Stack.pop()
 	} else if index.isLocal() {
-		return zmachine.StackFrames[0].Locals[index.asLocal()]
+		return zmachine.StackFrames.peek().Locals[index.asLocal()]
 	} else {
 		return zmachine.getGlobal(index.asGlobal())
 	}
@@ -61,9 +61,9 @@ func (zmachine ZMachine) readVariable(index VarNum) word {
 
 func (zmachine *ZMachine) writeVariable(value word, index VarNum) {
 	if index == 0 {
-		zmachine.StackFrames[0].Stack.push(value)
+		zmachine.StackFrames.peek().Stack.push(value)
 	} else if index.isLocal() {
-		zmachine.StackFrames[0].Locals[index.asLocal()] = value
+		zmachine.StackFrames.peek().Locals[index.asLocal()] = value
 	} else {
 		zmachine.setGlobal(value, index.asGlobal())
 	}

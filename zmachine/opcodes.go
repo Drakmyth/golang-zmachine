@@ -38,7 +38,7 @@ func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
 		branch.Condition == BC_OnFalse && !condition {
 		switch branch.Behavior {
 		case BB_Normal:
-			zmachine.StackFrames[0].Counter = branch.Address
+			zmachine.StackFrames.peek().Counter = branch.Address
 			return true
 		case BB_ReturnFalse:
 			zmachine.endCurrentFrame(0)
@@ -96,6 +96,7 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := instruction.Operands[0].asVarNum()
 
+	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	variable_value := zmachine.readVariable(variable)
 	variable_value--
 	zmachine.writeVariable(variable_value, variable)
@@ -107,6 +108,7 @@ func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := instruction.Operands[0].asVarNum()
 	value := instruction.Operands[1].asWord()
 
+	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	variable_value := zmachine.readVariable(variable)
 	variable_value--
 	zmachine.writeVariable(variable_value, variable)
@@ -124,7 +126,7 @@ func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	offset := instruction.Operands[0].asInt()
 
-	frame := &zmachine.StackFrames[0]
+	frame := zmachine.StackFrames.peek()
 	frame.Counter = frame.Counter.offsetBytes(offset)
 	return true, nil
 }
