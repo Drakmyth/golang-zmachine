@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -97,6 +98,61 @@ func (instruction Instruction) String() string {
 	}
 
 	return strings.Join(log_strings, " ")
+}
+
+func (zmachine ZMachine) readInstruction(address Address) (Instruction, Address, error) {
+	opcode, next_address := zmachine.readOpcode(address)
+	inst_info, ok := opcodes[opcode]
+	if !ok {
+		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
+	}
+	instruction := Instruction{InstructionInfo: inst_info, Opcode: opcode, Address: address}
+
+	if instruction.Form == IF_Extended {
+		return Instruction{}, 0, fmt.Errorf("unimplemented: extended form instruction")
+	}
+
+	// Determine Variable Form operand types
+	if instruction.Form == IF_Variable {
+		var types_byte uint8
+		types_byte, next_address = zmachine.readByte(next_address)
+
+		for shift := 0; shift <= 6; shift += 2 {
+			operand_type := OperandType((types_byte >> shift) & 0b11)
+			if operand_type != OT_Omitted {
+				instruction.OperandTypes = append(instruction.OperandTypes, operand_type)
+			}
+		}
+		// Types are parsed last to first, so we need to reverse them
+		slices.Reverse(instruction.OperandTypes)
+	}
+
+	// Parse Operands
+	instruction.Operands = make([]Operand, 0, len(instruction.OperandTypes))
+	for _, optype := range instruction.OperandTypes {
+		var operand Operand
+		operand, next_address = zmachine.readOperand(optype, next_address)
+		instruction.Operands = append(instruction.Operands, operand)
+	}
+
+	if instruction.StoresResult() {
+		var store_varnum VarNum
+		store_varnum, next_address = zmachine.readVarNum(next_address)
+		instruction.StoreVariable = store_varnum
+	}
+
+	if instruction.Branches() {
+		var branch Branch
+		branch, next_address = zmachine.readBranch(next_address)
+		instruction.Branch = branch
+	}
+
+	// if instruction.HasText() {
+	//     // TODO: Implement text handling
+	// }
+
+	instruction.NextAddress = next_address
+	return instruction, next_address, nil
 }
 
 type BranchBehavior uint8

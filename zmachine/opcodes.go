@@ -33,12 +33,27 @@ func (zmachine ZMachine) readOpcode(address Address) (Opcode, Address) {
 	return Opcode(opcode), next_address
 }
 
+func (zmachine ZMachine) getRoutineAddress(address Address) Address {
+	switch zmachine.Header.Version {
+	case 1, 2, 3:
+		return address * 2
+	case 4, 5:
+		return address * 4
+	case 6, 7:
+		return address*4 + zmachine.Header.RoutinesAddr*8
+	case 8:
+		return address * 8
+	}
+
+	panic("Unknown version")
+}
+
 func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
 	if branch.Condition == BC_OnTrue && condition ||
 		branch.Condition == BC_OnFalse && !condition {
 		switch branch.Behavior {
 		case BB_Normal:
-			zmachine.StackFrames.peek().Counter = branch.Address
+			zmachine.Stack.peek().Counter = branch.Address
 			return true
 		case BB_ReturnFalse:
 			zmachine.endCurrentFrame(0)
@@ -66,7 +81,7 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	routineAddr := zmachine.getRoutineAddress(packed_address)
 	num_locals, next_address := zmachine.readByte(routineAddr)
-	frame := StackFrame{}
+	frame := Frame{}
 	frame.Locals = make([]word, 0, num_locals)
 	for range num_locals {
 		var local word
@@ -89,7 +104,7 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 		frame.ReturnVariable = instruction.StoreVariable
 	}
 
-	zmachine.StackFrames.push(frame)
+	zmachine.Stack.push(frame)
 	return false, nil // Return false because the previous frame hasn't been updated yet even though there is a new frame
 }
 
@@ -130,7 +145,7 @@ func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	offset := instruction.Operands[0].asInt()
 
-	frame := zmachine.StackFrames.peek()
+	frame := zmachine.Stack.peek()
 	frame.Counter = instruction.NextAddress.offsetBytes(offset - 2)
 	return true, nil
 }
