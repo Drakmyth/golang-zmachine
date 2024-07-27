@@ -152,10 +152,10 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return false, nil
 }
 
-// func print_addr(zmachine *ZMachine, instruction Instruction) bool {
-// 	address := Address(zmachine.get_operand_value(instruction.OperandValues[0]))
+// func print_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+// 	address := instruction.Operands[0].asAddress()
 // 	zmachine.read_zstring(address)
-// 	return false
+// 	return false, nil
 // }
 
 func ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
@@ -176,12 +176,12 @@ func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 // func storeb(zmachine *ZMachine, instruction Instruction) (bool, error) {
-// 	array := zmachine.get_operand_value(instruction, 0)
-// 	byte_index := zmachine.get_operand_value(instruction, 1)
-// 	value := uint8(zmachine.get_operand_value(instruction, 2))
+// array := instruction.Operands[0].asAddress()
+// byte_index := instruction.Operands[1].asInt()
+// value := instruction.Operands[2].asByte()
 
-// 	address := Address(array + byte_index)
-// 	zmachine.write_byte(value, address)
+// 	address := array.offsetBytes(byte_index)
+// 	zmachine.writeByte(value, address)
 // 	return false, nil
 // }
 
