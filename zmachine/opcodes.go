@@ -13,7 +13,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
 	// 0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
 	// // 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
-	// 0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
+	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
@@ -130,12 +130,13 @@ func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return false, nil
 }
 
-// func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
-// 	offset := zmachine.get_operand_value(instruction, 0)
-// 	frame := zmachine.CurrentFrame()
-// 	frame.Counter = Address(uint16(frame.Counter) + offset)
-// 	return true, nil
-// }
+func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	offset := instruction.Operands[0].asInt()
+
+	frame := &zmachine.StackFrames[0]
+	frame.Counter = frame.Counter.offsetBytes(offset)
+	return true, nil
+}
 
 func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
