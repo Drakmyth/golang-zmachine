@@ -6,7 +6,7 @@ type Opcode uint16
 
 var opcodes = map[Opcode]InstructionInfo{
 	// 0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
-	// 0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
+	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
 	0x61: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, je},
@@ -156,13 +156,16 @@ func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return false, nil
 }
 
-// func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
-// 	array := zmachine.get_operand_value(instruction, 0)
-// 	word_index := zmachine.get_operand_value(instruction, 1)
-// 	value, _ := zmachine.read_word(Address(array + 2*word_index))
-// 	zmachine.write_variable(value, instruction.StoreVariable)
-// 	return false, nil
-// }
+func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	array := instruction.Operands[0].asAddress()
+	word_index := instruction.Operands[1].asInt()
+
+	address := array.offsetWords(word_index)
+	value, _ := zmachine.readWord(address)
+
+	zmachine.writeVariable(value, instruction.StoreVariable)
+	return false, nil
+}
 
 // func print_addr(zmachine *ZMachine, instruction Instruction) bool {
 // 	address := Address(zmachine.get_operand_value(instruction.OperandValues[0]))
