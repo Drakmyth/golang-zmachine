@@ -12,6 +12,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
 	0x2d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, store},
+	0x49: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, and},
 	0x4a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test_attr},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
@@ -80,6 +81,14 @@ func add(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	b := instruction.Operands[1].asWord()
 
 	zmachine.writeVariable(a+b, instruction.StoreVariable)
+	return false, nil
+}
+
+func and(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	a := instruction.Operands[0].asWord()
+	b := instruction.Operands[1].asWord()
+
+	zmachine.writeVariable(a&b, instruction.StoreVariable)
 	return false, nil
 }
 
