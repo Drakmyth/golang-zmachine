@@ -22,6 +22,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
+	0xb2: {IF_Short, IM_None, []OperandType{}, print},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
@@ -172,6 +173,19 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	zmachine.writeVariable(value, instruction.StoreVariable)
 	return false, nil
+}
+
+func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	str, next_address := zmachine.readZString(instruction.NextAddress)
+	fmt.Print(str)
+
+	branch := Branch{
+		Address:   next_address,
+		Behavior:  BB_Normal,
+		Condition: BC_OnTrue,
+	}
+
+	return zmachine.performBranch(branch, true), nil
 }
 
 // func print_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
