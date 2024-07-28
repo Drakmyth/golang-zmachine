@@ -9,6 +9,7 @@ type Opcode uint16
 
 var opcodes = map[Opcode]InstructionInfo{
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
+	0x05: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, inc_chk},
 	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
 	0x0f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadw},
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
@@ -155,6 +156,20 @@ func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	zmachine.writeVariable(variable_value, variable)
 
 	return zmachine.performBranch(instruction.Branch, variable_value < value), nil
+}
+
+func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	variable := instruction.Operands[0].asVarNum()
+	value := instruction.Operands[1].asWord()
+
+	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
+	// Is this actually a problem? It will pop it off, but then push it right back on.
+	// The address will change potentially, but does that matter?
+	variable_value := zmachine.readVariable(variable)
+	variable_value++
+	zmachine.writeVariable(variable_value, variable)
+
+	return zmachine.performBranch(instruction.Branch, variable_value > value), nil
 }
 
 func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
