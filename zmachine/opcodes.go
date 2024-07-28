@@ -10,6 +10,7 @@ type Opcode uint16
 var opcodes = map[Opcode]InstructionInfo{
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
 	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
+	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
 	0x2d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, store},
 	0x4a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test_attr},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
@@ -163,6 +164,16 @@ func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 
 	return zmachine.performBranch(instruction.Branch, a == 0), nil
+}
+
+func loadb(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	array := instruction.Operands[0].asAddress()
+	index := instruction.Operands[1].asInt()
+
+	value, _ := zmachine.readByte(array.offsetBytes(index))
+	zmachine.writeVariable(word(value), instruction.StoreVariable)
+
+	return false, nil
 }
 
 func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
