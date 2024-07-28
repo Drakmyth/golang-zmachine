@@ -9,6 +9,7 @@ type Opcode uint16
 
 var opcodes = map[Opcode]InstructionInfo{
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
+	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
@@ -213,6 +214,14 @@ func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	address := array.offsetWords(word_index)
 	zmachine.writeWord(value, address)
+	return false, nil
+}
+
+func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	variable := instruction.Operands[0].asVarNum()
+	value := instruction.Operands[0].asWord()
+
+	zmachine.writeVariable(value, variable)
 	return false, nil
 }
 
