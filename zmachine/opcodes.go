@@ -1,6 +1,9 @@
 package zmachine
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type Opcode uint16
 
@@ -19,6 +22,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
+	0xe3: {IF_Variable, IM_None, []OperandType{}, put_prop},
 }
 
 func (zmachine ZMachine) readOpcode(address Address) (Opcode, Address) {
@@ -172,6 +176,28 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // 	zmachine.read_zstring(address)
 // 	return false, nil
 // }
+
+func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	object_index := instruction.Operands[0].asInt()
+	property_index := instruction.Operands[1].asByte()
+	value := instruction.Operands[2].asWord()
+
+	object := zmachine.getObject(object_index)
+	properties, _ := zmachine.readProperties(object.PropertiesAddr)
+
+	property_data_length := len(properties.Properties[property_index])
+	switch property_data_length {
+	case 1:
+		properties.Properties[property_index][0] = value.lowByte()
+	case 2:
+		properties.Properties[property_index][0] = value.highByte()
+		properties.Properties[property_index][1] = value.lowByte()
+	default:
+		return false, fmt.Errorf("unsupported put_prop data length: %d", property_data_length)
+	}
+
+	return false, nil
+}
 
 func ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := instruction.Operands[0].asWord()

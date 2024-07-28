@@ -104,7 +104,7 @@ func (zmachine ZMachine) readInstruction(address Address) (Instruction, Address,
 	opcode, next_address := zmachine.readOpcode(address)
 	inst_info, ok := opcodes[opcode]
 	if !ok {
-		return Instruction{}, 0, fmt.Errorf("unknown opcode: %x", opcode)
+		return Instruction{}, 0, fmt.Errorf("unknown opcode: %02x", opcode)
 	}
 	instruction := Instruction{InstructionInfo: inst_info, Opcode: opcode, Address: address}
 
