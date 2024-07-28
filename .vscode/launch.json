@@ -9,7 +9,7 @@
             "program": "${workspaceFolder}",
             "debugAdapter": "dlv-dap",
             "env": {},
-            "args": ["./stories/zork1.z3"],
+            "args": ["--debug", "./stories/zork1.z3"],
             "console": "internalConsole"
         }
     ]

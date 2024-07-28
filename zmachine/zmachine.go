@@ -8,6 +8,7 @@ import (
 )
 
 type ZMachine struct {
+	Debug  bool
 	Header Header
 	Memory []byte
 	Stack  Stack[Frame]
@@ -72,7 +73,9 @@ func (zmachine *ZMachine) executeNextInstruction() error {
 		return err
 	}
 
-	fmt.Printf("%x: %s\n", frame.Counter, instruction)
+	if zmachine.Debug {
+		fmt.Printf("%x: %s\n", frame.Counter, instruction)
+	}
 
 	for i, optype := range instruction.OperandTypes {
 		if optype != OT_Variable {

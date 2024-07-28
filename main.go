@@ -9,6 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var debug bool
+
+func init() {
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Print execution instructions")
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "zmachine <story-file-path>",
 	Short: "Play a Z-Machine story file",
@@ -27,6 +33,8 @@ In other words, load and play the game!`,
 			fmt.Fprint(os.Stderr, err)
 			os.Exit(1)
 		}
+
+		interpreter.Debug = debug
 
 		err = interpreter.Run()
 		if err != nil {
