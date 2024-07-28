@@ -32,6 +32,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
 	0xe3: {IF_Variable, IM_None, []OperandType{}, put_prop},
+	0xe6: {IF_Variable, IM_None, []OperandType{}, print_num},
 }
 
 func (zmachine ZMachine) readOpcode(address Address) (Opcode, Address) {
@@ -224,6 +225,16 @@ func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // 	zmachine.read_zstring(address)
 // 	return false, nil
 // }
+
+func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	a := instruction.Operands[0].asInt()
+	fmt.Printf("%v", a)
+	if zmachine.Debug {
+		fmt.Println()
+	}
+
+	return false, nil
+}
 
 func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object_index := instruction.Operands[0].asInt()
