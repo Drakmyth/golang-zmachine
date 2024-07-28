@@ -11,6 +11,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
 	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
 	0x2d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, store},
+	0x4a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test_attr},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
@@ -241,4 +242,11 @@ func sub(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	b := instruction.Operands[1].asWord()
 	zmachine.writeVariable(a-b, instruction.StoreVariable)
 	return false, nil
+}
+
+func test_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	object_index := instruction.Operands[0].asInt()
+	attribute_index := instruction.Operands[1].asInt()
+
+	return zmachine.performBranch(instruction.Branch, zmachine.getObject(object_index).hasAttribute(attribute_index)), nil
 }
