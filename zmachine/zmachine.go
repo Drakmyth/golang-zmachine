@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+
+	"github.com/Drakmyth/golang-zmachine/screen"
 )
 
 type ZMachine struct {
@@ -57,6 +59,7 @@ func Load(story_path string) (*ZMachine, error) {
 }
 
 func (zmachine ZMachine) Run() error {
+	screen.Clear()
 	for {
 		err := zmachine.executeNextInstruction()
 		if err != nil {
