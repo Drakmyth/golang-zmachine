@@ -10,6 +10,7 @@ type Opcode uint16
 var opcodes = map[Opcode]InstructionInfo{
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
 	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
+	0x0f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadw},
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
 	0x2d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, store},
 	0x49: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, and},
