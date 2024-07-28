@@ -27,6 +27,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
 	0xbb: {IF_Short, IM_None, []OperandType{}, new_line},
+	0xc9: {IF_Variable, IM_Store, []OperandType{}, and},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
