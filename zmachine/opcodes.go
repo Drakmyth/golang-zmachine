@@ -71,7 +71,7 @@ func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
 		branch.Condition == BC_OnFalse && !condition {
 		switch branch.Behavior {
 		case BB_Normal:
-			zmachine.Stack.peek().Counter = branch.Address
+			zmachine.Stack.Peek().Counter = branch.Address
 			return true
 		case BB_ReturnFalse:
 			zmachine.endCurrentFrame(0)
@@ -130,7 +130,7 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 		frame.ReturnVariable = instruction.StoreVariable
 	}
 
-	zmachine.Stack.push(frame)
+	zmachine.Stack.Push(frame)
 	return false, nil // Return false because the previous frame hasn't been updated yet even though there is a new frame
 }
 
@@ -185,7 +185,7 @@ func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	offset := instruction.Operands[0].asInt()
 
-	frame := zmachine.Stack.peek()
+	frame := zmachine.Stack.Peek()
 	frame.Counter = instruction.NextAddress.OffsetBytes(offset - 2)
 	return true, nil
 }

@@ -17,19 +17,19 @@ type ZMachine struct {
 	Debug  bool
 	Header Header
 	Memory []byte
-	Stack  Stack[Frame]
+	Stack  memory.Stack[Frame]
 }
 
 type Frame struct {
 	Counter        memory.Address
-	Stack          Stack[word]
+	Stack          memory.Stack[word]
 	Locals         []word
 	DiscardReturn  bool
 	ReturnVariable VarNum
 }
 
 func (zmachine *ZMachine) endCurrentFrame(value word) {
-	frame := zmachine.Stack.pop()
+	frame := zmachine.Stack.Pop()
 	if !frame.DiscardReturn {
 		zmachine.writeVariable(value, frame.ReturnVariable)
 	}
@@ -94,7 +94,7 @@ func (zmachine *ZMachine) writeWord(value word, address Address) {
 }
 
 func (zmachine *ZMachine) executeNextInstruction() error {
-	frame := zmachine.Stack.peek()
+	frame := zmachine.Stack.Peek()
 
 	instruction, next_address, err := zmachine.readInstruction(frame.Counter)
 	if err != nil {
