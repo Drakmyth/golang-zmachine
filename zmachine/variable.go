@@ -41,12 +41,12 @@ func (varnum VarNum) asGlobal() int {
 }
 
 func (zmachine ZMachine) getGlobal(index int) word {
-	global, _ := zmachine.readWord(zmachine.Header.GlobalsAddr.offsetWords(index))
+	global, _ := zmachine.readWord(zmachine.Header.GlobalsAddr.OffsetWords(index))
 	return global
 }
 
 func (zmachine *ZMachine) setGlobal(value word, index int) {
-	zmachine.writeWord(value, zmachine.Header.GlobalsAddr.offsetWords(index))
+	zmachine.writeWord(value, zmachine.Header.GlobalsAddr.OffsetWords(index))
 }
 
 func (zmachine ZMachine) readVariable(index VarNum) word {

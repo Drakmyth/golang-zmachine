@@ -7,7 +7,11 @@ import (
 	"os"
 
 	"github.com/Drakmyth/golang-zmachine/screen"
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
+
+type word = memory.Word
+type Address = memory.Address
 
 type ZMachine struct {
 	Debug  bool
@@ -17,7 +21,7 @@ type ZMachine struct {
 }
 
 type Frame struct {
-	Counter        Address
+	Counter        memory.Address
 	Stack          Stack[word]
 	Locals         []word
 	DiscardReturn  bool
@@ -66,6 +70,27 @@ func (zmachine ZMachine) Run() error {
 			return err
 		}
 	}
+}
+
+func (zmachine ZMachine) readByte(address Address) (byte, Address) {
+	return zmachine.Memory[address], address.OffsetBytes(1)
+}
+
+func (zmachine *ZMachine) writeByte(value byte, address Address) {
+	zmachine.Memory[address] = value
+}
+
+func (zmachine ZMachine) readWord(address Address) (word, Address) {
+	high := word(zmachine.Memory[address])
+	low := word(zmachine.Memory[address.OffsetBytes(1)])
+	return (high << 8) | low, address.OffsetWords(1)
+}
+
+func (zmachine *ZMachine) writeWord(value word, address Address) {
+	high := byte(value >> 8)
+	low := byte(value)
+	zmachine.Memory[address] = high
+	zmachine.Memory[address.OffsetBytes(1)] = low
 }
 
 func (zmachine *ZMachine) executeNextInstruction() error {

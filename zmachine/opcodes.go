@@ -186,7 +186,7 @@ func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	offset := instruction.Operands[0].asInt()
 
 	frame := zmachine.Stack.peek()
-	frame.Counter = instruction.NextAddress.offsetBytes(offset - 2)
+	frame.Counter = instruction.NextAddress.OffsetBytes(offset - 2)
 	return true, nil
 }
 
@@ -200,7 +200,7 @@ func loadb(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	array := instruction.Operands[0].asAddress()
 	index := instruction.Operands[1].asInt()
 
-	value, _ := zmachine.readByte(array.offsetBytes(index))
+	value, _ := zmachine.readByte(array.OffsetBytes(index))
 	zmachine.writeVariable(word(value), instruction.StoreVariable)
 
 	return false, nil
@@ -210,7 +210,7 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	array := instruction.Operands[0].asAddress()
 	word_index := instruction.Operands[1].asInt()
 
-	address := array.offsetWords(word_index)
+	address := array.OffsetWords(word_index)
 	value, _ := zmachine.readWord(address)
 
 	zmachine.writeVariable(value, instruction.StoreVariable)
@@ -277,10 +277,10 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	property_data_length := len(properties.Properties[property_index])
 	switch property_data_length {
 	case 1:
-		properties.Properties[property_index][0] = value.lowByte()
+		properties.Properties[property_index][0] = value.LowByte()
 	case 2:
-		properties.Properties[property_index][0] = value.highByte()
-		properties.Properties[property_index][1] = value.lowByte()
+		properties.Properties[property_index][0] = value.HighByte()
+		properties.Properties[property_index][1] = value.LowByte()
 	default:
 		return false, fmt.Errorf("unsupported put_prop data length: %d", property_data_length)
 	}
@@ -305,7 +305,7 @@ func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	word_index := instruction.Operands[1].asInt()
 	value := instruction.Operands[2].asWord()
 
-	address := array.offsetWords(word_index)
+	address := array.OffsetWords(word_index)
 	zmachine.writeWord(value, address)
 	return false, nil
 }
@@ -323,7 +323,7 @@ func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // byte_index := instruction.Operands[1].asInt()
 // value := instruction.Operands[2].asByte()
 
-// 	address := array.offsetBytes(byte_index)
+// 	address := array.OffsetBytes(byte_index)
 // 	zmachine.writeByte(value, address)
 // 	return false, nil
 // }

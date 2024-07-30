@@ -60,14 +60,14 @@ func TestZMachine_getGlobal(t *testing.T) {
 	zmachine.Header.GlobalsAddr = Address(0x01f4)
 
 	global_num := 2
-	address := zmachine.Header.GlobalsAddr.offsetWords(global_num)
+	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)
 	expected := word(0xbeef)
 
-	zmachine.Memory[address] = expected.highByte()
-	zmachine.Memory[address.offsetBytes(1)] = expected.lowByte()
+	zmachine.Memory[address] = expected.HighByte()
+	zmachine.Memory[address.OffsetBytes(1)] = expected.LowByte()
 	got := zmachine.getGlobal(global_num)
 
-	assertEqual(t, expected, got)
+	AssertEqual(t, expected, got)
 }
 
 func TestZMachine_setGlobal(t *testing.T) {
@@ -76,15 +76,15 @@ func TestZMachine_setGlobal(t *testing.T) {
 	zmachine.Header.GlobalsAddr = Address(0x01f4)
 
 	global_num := 2
-	address := zmachine.Header.GlobalsAddr.offsetWords(global_num)
+	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)
 	initial := word(0xfeed)
 	expected := word(0xbeef)
 
-	zmachine.Memory[address] = initial.highByte()
-	zmachine.Memory[address.offsetBytes(1)] = initial.lowByte()
+	zmachine.Memory[address] = initial.HighByte()
+	zmachine.Memory[address.OffsetBytes(1)] = initial.LowByte()
 
 	zmachine.setGlobal(expected, global_num)
 	got := zmachine.getGlobal(global_num)
 
-	assertEqual(t, expected, got)
+	AssertEqual(t, expected, got)
 }

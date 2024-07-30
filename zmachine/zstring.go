@@ -108,7 +108,7 @@ func (zmachine ZMachine) readZString(address Address) (string, Address) {
 }
 
 func (zmachine ZMachine) getAbbreviation(index byte, control byte) string {
-	abbr_entry := zmachine.Header.AbbreviationsAddr.offsetWords(int((32*(control-1) + index)))
+	abbr_entry := zmachine.Header.AbbreviationsAddr.OffsetWords(int((32*(control-1) + index)))
 	address, _ := zmachine.readWord(abbr_entry)
 	abbreviation, _ := zmachine.readZString(Address(address * 2))
 	return abbreviation

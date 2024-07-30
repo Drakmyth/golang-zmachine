@@ -24,8 +24,8 @@ func (object Object) hasAttribute(index int) bool {
 }
 
 func (zmachine ZMachine) getObject(index int) Object {
-	tree_address := zmachine.Header.ObjectsAddr.offsetWords(31)
-	object_address := tree_address.offsetBytes(9 * (index - 1)) // object zero is not stored in memory, so we shift the index back one
+	tree_address := zmachine.Header.ObjectsAddr.OffsetWords(31)
+	object_address := tree_address.OffsetBytes(9 * (index - 1)) // object zero is not stored in memory, so we shift the index back one
 	object_memory := bytes.NewBuffer(zmachine.Memory[object_address : object_address+9])
 	object := Object{}
 	binary.Read(object_memory, binary.BigEndian, &object)
@@ -44,9 +44,9 @@ func (zmachine ZMachine) readProperties(address Address) (PropertiesTable, Addre
 	for prop_size != 0 {
 		prop_length := int(prop_size>>5) + 1
 		prop_number := prop_size & 0b11111
-		prop_data := zmachine.Memory[next_address:next_address.offsetBytes(prop_length)]
+		prop_data := zmachine.Memory[next_address:next_address.OffsetBytes(prop_length)]
 		table.Properties[prop_number] = prop_data
-		prop_size, next_address = zmachine.readByte(next_address.offsetBytes(prop_length))
+		prop_size, next_address = zmachine.readByte(next_address.OffsetBytes(prop_length))
 	}
 
 	return table, next_address
@@ -54,6 +54,6 @@ func (zmachine ZMachine) readProperties(address Address) (PropertiesTable, Addre
 
 func (zmachine ZMachine) getPropertyDefault(index int) word {
 	address := zmachine.Header.ObjectsAddr
-	val, _ := zmachine.readWord(address.offsetWords(index))
+	val, _ := zmachine.readWord(address.OffsetWords(index))
 	return val
 }

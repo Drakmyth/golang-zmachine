@@ -194,7 +194,7 @@ func (zmachine ZMachine) readBranch(address Address) (Branch, Address) {
 	case 1:
 		branch.Behavior = BB_ReturnTrue
 	default:
-		branch.Address = next_address.offsetBytes(int(offset) - 2)
+		branch.Address = next_address.OffsetBytes(int(offset) - 2)
 	}
 
 	return branch, next_address

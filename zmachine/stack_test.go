@@ -11,7 +11,7 @@ func TestStack_push(t *testing.T) {
 	data := []int{5, 7, 2}
 	for _, val := range data {
 		stack.push(val)
-		assertEqual(t, val, *stack.peek())
+		AssertEqual(t, val, *stack.peek())
 	}
 }
 
@@ -22,7 +22,7 @@ func TestStack_pop(t *testing.T) {
 	slices.Reverse(data)
 	for _, expected := range data {
 		val := stack.pop()
-		assertEqual(t, expected, val)
+		AssertEqual(t, expected, val)
 	}
 }
 
@@ -30,6 +30,6 @@ func TestStack_peek(t *testing.T) {
 	data := []int{5, 7, 2}
 	stack := Stack[int]{data[0], data[1], data[2]}
 
-	assertEqual(t, data[2], *stack.peek())
-	assertEqual(t, 3, len(stack))
+	AssertEqual(t, data[2], *stack.peek())
+	AssertEqual(t, 3, len(stack))
 }
