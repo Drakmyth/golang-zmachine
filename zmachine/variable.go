@@ -2,6 +2,8 @@ package zmachine
 
 import (
 	"fmt"
+
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
 
 type VarNum uint8
@@ -69,7 +71,7 @@ func (zmachine *ZMachine) writeVariable(value word, index VarNum) {
 	}
 }
 
-func (zmachine ZMachine) readVarNum(address Address) (VarNum, Address) {
+func (zmachine ZMachine) readVarNum(address memory.Address) (VarNum, memory.Address) {
 	varnum_byte, next_address := zmachine.readByte(address)
 	return VarNum(varnum_byte), next_address
 }

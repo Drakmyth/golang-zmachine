@@ -3,6 +3,8 @@ package zmachine
 import (
 	"fmt"
 	"testing"
+
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
 
 func TestVarNum_isLocal_BelowMinimum(t *testing.T) {
@@ -57,7 +59,7 @@ func TestVarNum_isGlobal_InRange(t *testing.T) {
 func TestZMachine_getGlobal(t *testing.T) {
 	zmachine := ZMachine{}
 	zmachine.init(make([]byte, 1000))
-	zmachine.Header.GlobalsAddr = Address(0x01f4)
+	zmachine.Header.GlobalsAddr = memory.Address(0x01f4)
 
 	global_num := 2
 	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)
@@ -73,7 +75,7 @@ func TestZMachine_getGlobal(t *testing.T) {
 func TestZMachine_setGlobal(t *testing.T) {
 	zmachine := ZMachine{}
 	zmachine.init(make([]byte, 1000))
-	zmachine.Header.GlobalsAddr = Address(0x01f4)
+	zmachine.Header.GlobalsAddr = memory.Address(0x01f4)
 
 	global_num := 2
 	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)

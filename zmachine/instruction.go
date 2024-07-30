@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
 
 type InstructionForm uint8
@@ -58,8 +60,8 @@ func (info InstructionInfo) HasText() bool {
 
 type Instruction struct {
 	InstructionInfo
-	Address       Address
-	NextAddress   Address
+	Address       memory.Address
+	NextAddress   memory.Address
 	Opcode        Opcode
 	Operands      []Operand
 	StoreVariable VarNum
@@ -100,7 +102,7 @@ func (instruction Instruction) String() string {
 	return strings.Join(log_strings, " ")
 }
 
-func (zmachine ZMachine) readInstruction(address Address) (Instruction, Address, error) {
+func (zmachine ZMachine) readInstruction(address memory.Address) (Instruction, memory.Address, error) {
 	opcode, next_address := zmachine.readOpcode(address)
 	inst_info, ok := opcodes[opcode]
 	if !ok {
@@ -171,12 +173,12 @@ const (
 )
 
 type Branch struct {
-	Address   Address
+	Address   memory.Address
 	Behavior  BranchBehavior
 	Condition BranchCondition
 }
 
-func (zmachine ZMachine) readBranch(address Address) (Branch, Address) {
+func (zmachine ZMachine) readBranch(address memory.Address) (Branch, memory.Address) {
 	branch := Branch{}
 	branch_byte, next_address := zmachine.readByte(address)
 	branch.Condition = BranchCondition(branch_byte >> 7)
@@ -214,15 +216,15 @@ func (operand Operand) asVarNum() VarNum {
 	return VarNum(operand)
 }
 
-func (operand Operand) asAddress() Address {
-	return Address(operand)
+func (operand Operand) asAddress() memory.Address {
+	return memory.Address(operand)
 }
 
 func (operand Operand) asInt() int {
 	return int(operand)
 }
 
-func (zmachine ZMachine) readOperand(optype OperandType, address Address) (Operand, Address) {
+func (zmachine ZMachine) readOperand(optype OperandType, address memory.Address) (Operand, memory.Address) {
 	switch optype {
 	case OT_Large:
 		opvalue, next_address := zmachine.readWord(address)

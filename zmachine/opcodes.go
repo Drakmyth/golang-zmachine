@@ -3,6 +3,8 @@ package zmachine
 import (
 	"errors"
 	"fmt"
+
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
 
 type Opcode uint16
@@ -39,7 +41,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xe6: {IF_Variable, IM_None, []OperandType{}, print_num},
 }
 
-func (zmachine ZMachine) readOpcode(address Address) (Opcode, Address) {
+func (zmachine ZMachine) readOpcode(address memory.Address) (Opcode, memory.Address) {
 	opcode, next_address := zmachine.readByte(address)
 
 	if opcode == 0xbe {
@@ -51,7 +53,7 @@ func (zmachine ZMachine) readOpcode(address Address) (Opcode, Address) {
 	return Opcode(opcode), next_address
 }
 
-func (zmachine ZMachine) getRoutineAddress(address Address) Address {
+func (zmachine ZMachine) getRoutineAddress(address memory.Address) memory.Address {
 	switch zmachine.Header.Version {
 	case 1, 2, 3:
 		return address * 2

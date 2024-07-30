@@ -1,32 +1,34 @@
 package zmachine
 
+import "github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
+
 type Header struct {
 	Version               uint8
 	Flags1                uint8
 	ReleaseNumber         uint16
-	HighMemoryAddr        Address
-	InitialProgramCounter Address
-	DictionaryAddr        Address
-	ObjectsAddr           Address
-	GlobalsAddr           Address
-	StaticMemoryAddr      Address
+	HighMemoryAddr        memory.Address
+	InitialProgramCounter memory.Address
+	DictionaryAddr        memory.Address
+	ObjectsAddr           memory.Address
+	GlobalsAddr           memory.Address
+	StaticMemoryAddr      memory.Address
 	Flags2                uint16
 	Serial                [6]byte
-	AbbreviationsAddr     Address
+	AbbreviationsAddr     memory.Address
 	FileLength            uint16
 	Checksum              uint16
 	Interpreter           Interpreter
 	Screen                Screen
 	Font                  Font
-	RoutinesAddr          Address
-	StaticStringsAddr     Address
+	RoutinesAddr          memory.Address
+	StaticStringsAddr     memory.Address
 	BackgroundColor       uint8
 	ForegroundColor       uint8
-	TermCharsAddr         Address
+	TermCharsAddr         memory.Address
 	Stream3Width          uint16
 	StandardRev           uint16
-	AlphabetAddr          Address
-	HeaderExtensionAddr   Address
+	AlphabetAddr          memory.Address
+	HeaderExtensionAddr   memory.Address
 }
 
 type Interpreter struct {

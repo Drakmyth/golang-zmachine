@@ -3,6 +3,8 @@ package zmachine
 import (
 	"bytes"
 	"encoding/binary"
+
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
 
 // TODO: In versions 4+ all these fields along with the length of the prop default table get bigger
@@ -11,7 +13,7 @@ type Object struct {
 	Parent         byte
 	Sibling        byte
 	Child          byte
-	PropertiesAddr Address
+	PropertiesAddr memory.Address
 }
 
 type PropertiesTable struct {
@@ -32,7 +34,7 @@ func (zmachine ZMachine) getObject(index int) Object {
 	return object
 }
 
-func (zmachine ZMachine) readProperties(address Address) (PropertiesTable, Address) {
+func (zmachine ZMachine) readProperties(address memory.Address) (PropertiesTable, memory.Address) {
 	_, next_address := zmachine.readByte(address) // The length byte is redundant since it's part of the name string
 	var object_name string
 	object_name, next_address = zmachine.readZString(next_address)

@@ -11,7 +11,6 @@ import (
 )
 
 type word = memory.Word
-type Address = memory.Address
 
 type ZMachine struct {
 	Debug  bool
@@ -72,21 +71,21 @@ func (zmachine ZMachine) Run() error {
 	}
 }
 
-func (zmachine ZMachine) readByte(address Address) (byte, Address) {
+func (zmachine ZMachine) readByte(address memory.Address) (byte, memory.Address) {
 	return zmachine.Memory[address], address.OffsetBytes(1)
 }
 
-func (zmachine *ZMachine) writeByte(value byte, address Address) {
+func (zmachine *ZMachine) writeByte(value byte, address memory.Address) {
 	zmachine.Memory[address] = value
 }
 
-func (zmachine ZMachine) readWord(address Address) (word, Address) {
+func (zmachine ZMachine) readWord(address memory.Address) (word, memory.Address) {
 	high := word(zmachine.Memory[address])
 	low := word(zmachine.Memory[address.OffsetBytes(1)])
 	return (high << 8) | low, address.OffsetWords(1)
 }
 
-func (zmachine *ZMachine) writeWord(value word, address Address) {
+func (zmachine *ZMachine) writeWord(value word, address memory.Address) {
 	high := byte(value >> 8)
 	low := byte(value)
 	zmachine.Memory[address] = high

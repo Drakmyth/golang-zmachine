@@ -3,6 +3,8 @@ package zmachine
 import (
 	"errors"
 	"strings"
+
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
 
 type ZStringKeyboard struct {
@@ -82,7 +84,7 @@ func (keyboard *ZStringKeyboard) print(zchars []byte) (string, error) {
 	return builder.String(), nil
 }
 
-func (zmachine ZMachine) readZString(address Address) (string, Address) {
+func (zmachine ZMachine) readZString(address memory.Address) (string, memory.Address) {
 	words := make([]word, 0)
 	zstr_word, next_address := zmachine.readWord(address)
 	words = append(words, zstr_word)
@@ -110,6 +112,6 @@ func (zmachine ZMachine) readZString(address Address) (string, Address) {
 func (zmachine ZMachine) getAbbreviation(index byte, control byte) string {
 	abbr_entry := zmachine.Header.AbbreviationsAddr.OffsetWords(int((32*(control-1) + index)))
 	address, _ := zmachine.readWord(abbr_entry)
-	abbreviation, _ := zmachine.readZString(Address(address * 2))
+	abbreviation, _ := zmachine.readZString(memory.Address(address * 2))
 	return abbreviation
 }
