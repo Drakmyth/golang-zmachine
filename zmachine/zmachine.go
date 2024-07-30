@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Drakmyth/golang-zmachine/screen"
 	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
+	"github.com/Drakmyth/golang-zmachine/zmachine/internal/screen"
 )
 
 type ZMachine struct {
