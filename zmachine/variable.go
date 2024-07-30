@@ -42,16 +42,16 @@ func (varnum VarNum) asGlobal() int {
 	return int(varnum - MinGlobalVarNum)
 }
 
-func (zmachine ZMachine) getGlobal(index int) word {
+func (zmachine ZMachine) getGlobal(index int) memory.Word {
 	global, _ := zmachine.readWord(zmachine.Header.GlobalsAddr.OffsetWords(index))
 	return global
 }
 
-func (zmachine *ZMachine) setGlobal(value word, index int) {
+func (zmachine *ZMachine) setGlobal(value memory.Word, index int) {
 	zmachine.writeWord(value, zmachine.Header.GlobalsAddr.OffsetWords(index))
 }
 
-func (zmachine ZMachine) readVariable(index VarNum) word {
+func (zmachine ZMachine) readVariable(index VarNum) memory.Word {
 	if index == 0 {
 		return zmachine.Stack.Peek().Stack.Pop()
 	} else if index.isLocal() {
@@ -61,7 +61,7 @@ func (zmachine ZMachine) readVariable(index VarNum) word {
 	}
 }
 
-func (zmachine *ZMachine) writeVariable(value word, index VarNum) {
+func (zmachine *ZMachine) writeVariable(value memory.Word, index VarNum) {
 	if index == 0 {
 		zmachine.Stack.Peek().Stack.Push(value)
 	} else if index.isLocal() {

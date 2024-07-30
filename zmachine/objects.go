@@ -54,7 +54,7 @@ func (zmachine ZMachine) readProperties(address memory.Address) (PropertiesTable
 	return table, next_address
 }
 
-func (zmachine ZMachine) getPropertyDefault(index int) word {
+func (zmachine ZMachine) getPropertyDefault(index int) memory.Word {
 	address := zmachine.Header.ObjectsAddr
 	val, _ := zmachine.readWord(address.OffsetWords(index))
 	return val

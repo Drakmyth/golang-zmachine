@@ -45,7 +45,7 @@ func (zmachine ZMachine) readOpcode(address memory.Address) (Opcode, memory.Addr
 	opcode, next_address := zmachine.readByte(address)
 
 	if opcode == 0xbe {
-		var ext_opcode word
+		var ext_opcode memory.Word
 		ext_opcode, next_address = zmachine.readWord(address)
 		return Opcode(ext_opcode), next_address
 	}
@@ -110,9 +110,9 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	routineAddr := zmachine.getRoutineAddress(packed_address)
 	num_locals, next_address := zmachine.readByte(routineAddr)
 	frame := Frame{}
-	frame.Locals = make([]word, 0, num_locals)
+	frame.Locals = make([]memory.Word, 0, num_locals)
 	for range num_locals {
-		var local word
+		var local memory.Word
 		if zmachine.Header.Version < 5 {
 			local, next_address = zmachine.readWord(next_address)
 		} else {
@@ -203,7 +203,7 @@ func loadb(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	index := instruction.Operands[1].asInt()
 
 	value, _ := zmachine.readByte(array.OffsetBytes(index))
-	zmachine.writeVariable(word(value), instruction.StoreVariable)
+	zmachine.writeVariable(memory.Word(value), instruction.StoreVariable)
 
 	return false, nil
 }

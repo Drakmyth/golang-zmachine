@@ -85,7 +85,7 @@ func (keyboard *ZStringKeyboard) print(zchars []byte) (string, error) {
 }
 
 func (zmachine ZMachine) readZString(address memory.Address) (string, memory.Address) {
-	words := make([]word, 0)
+	words := make([]memory.Word, 0)
 	zstr_word, next_address := zmachine.readWord(address)
 	words = append(words, zstr_word)
 

@@ -63,7 +63,7 @@ func TestZMachine_getGlobal(t *testing.T) {
 
 	global_num := 2
 	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)
-	expected := word(0xbeef)
+	expected := memory.Word(0xbeef)
 
 	zmachine.Memory[address] = expected.HighByte()
 	zmachine.Memory[address.OffsetBytes(1)] = expected.LowByte()
@@ -79,8 +79,8 @@ func TestZMachine_setGlobal(t *testing.T) {
 
 	global_num := 2
 	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)
-	initial := word(0xfeed)
-	expected := word(0xbeef)
+	initial := memory.Word(0xfeed)
+	expected := memory.Word(0xbeef)
 
 	zmachine.Memory[address] = initial.HighByte()
 	zmachine.Memory[address.OffsetBytes(1)] = initial.LowByte()

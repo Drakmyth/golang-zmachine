@@ -10,8 +10,6 @@ import (
 	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
 )
 
-type word = memory.Word
-
 type ZMachine struct {
 	Debug  bool
 	Header Header
@@ -21,13 +19,13 @@ type ZMachine struct {
 
 type Frame struct {
 	Counter        memory.Address
-	Stack          memory.Stack[word]
-	Locals         []word
+	Stack          memory.Stack[memory.Word]
+	Locals         []memory.Word
 	DiscardReturn  bool
 	ReturnVariable VarNum
 }
 
-func (zmachine *ZMachine) endCurrentFrame(value word) {
+func (zmachine *ZMachine) endCurrentFrame(value memory.Word) {
 	frame := zmachine.Stack.Pop()
 	if !frame.DiscardReturn {
 		zmachine.writeVariable(value, frame.ReturnVariable)
@@ -79,13 +77,13 @@ func (zmachine *ZMachine) writeByte(value byte, address memory.Address) {
 	zmachine.Memory[address] = value
 }
 
-func (zmachine ZMachine) readWord(address memory.Address) (word, memory.Address) {
-	high := word(zmachine.Memory[address])
-	low := word(zmachine.Memory[address.OffsetBytes(1)])
+func (zmachine ZMachine) readWord(address memory.Address) (memory.Word, memory.Address) {
+	high := memory.Word(zmachine.Memory[address])
+	low := memory.Word(zmachine.Memory[address.OffsetBytes(1)])
 	return (high << 8) | low, address.OffsetWords(1)
 }
 
-func (zmachine *ZMachine) writeWord(value word, address memory.Address) {
+func (zmachine *ZMachine) writeWord(value memory.Word, address memory.Address) {
 	high := byte(value >> 8)
 	low := byte(value)
 	zmachine.Memory[address] = high
