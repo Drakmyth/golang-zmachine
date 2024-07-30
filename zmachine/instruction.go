@@ -64,7 +64,7 @@ type Instruction struct {
 	NextAddress   memory.Address
 	Opcode        Opcode
 	Operands      []Operand
-	StoreVariable VarNum
+	StoreVariable Variable
 	Branch        Branch
 	Text          string
 }
@@ -138,8 +138,8 @@ func (zmachine ZMachine) readInstruction(address memory.Address) (Instruction, m
 	}
 
 	if instruction.StoresResult() {
-		var store_varnum VarNum
-		store_varnum, next_address = zmachine.readVarNum(next_address)
+		var store_varnum Variable
+		store_varnum, next_address = zmachine.readVariable(next_address)
 		instruction.StoreVariable = store_varnum
 	}
 

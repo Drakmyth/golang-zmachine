@@ -89,7 +89,7 @@ func add(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
 
-	zmachine.writeVariable(a+b, instruction.StoreVariable)
+	instruction.StoreVariable.Write(a + b)
 	return false, nil
 }
 
@@ -97,7 +97,7 @@ func and(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
 
-	zmachine.writeVariable(a&b, instruction.StoreVariable)
+	instruction.StoreVariable.Write(a & b)
 	return false, nil
 }
 
@@ -109,7 +109,7 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	routineAddr := zmachine.getRoutineAddress(packed_address)
 	num_locals, next_address := zmachine.readByte(routineAddr)
-	frame := Frame{}
+	frame := zmachine.NewFrame()
 	frame.Locals = make([]memory.Word, 0, num_locals)
 	for range num_locals {
 		var local memory.Word
@@ -137,44 +137,44 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	variable := instruction.Operands[0].asVarNum()
+	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	// Is this actually a problem? It will pop it off, but then push it right back on.
 	// The address will change potentially, but does that matter?
-	variable_value := zmachine.readVariable(variable)
-	variable_value--
-	zmachine.writeVariable(variable_value, variable)
+	value := variable.Read()
+	value--
+	variable.Write(value)
 
 	return false, nil
 }
 
 func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	variable := instruction.Operands[0].asVarNum()
-	value := instruction.Operands[1].asWord()
+	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
+	condition := instruction.Operands[1].asWord()
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	// Is this actually a problem? It will pop it off, but then push it right back on.
 	// The address will change potentially, but does that matter?
-	variable_value := zmachine.readVariable(variable)
-	variable_value--
-	zmachine.writeVariable(variable_value, variable)
+	value := variable.Read()
+	value--
+	variable.Write(value)
 
-	return zmachine.performBranch(instruction.Branch, variable_value < value), nil
+	return zmachine.performBranch(instruction.Branch, value < condition), nil
 }
 
 func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	variable := instruction.Operands[0].asVarNum()
-	value := instruction.Operands[1].asWord()
+	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
+	condition := instruction.Operands[1].asWord()
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	// Is this actually a problem? It will pop it off, but then push it right back on.
 	// The address will change potentially, but does that matter?
-	variable_value := zmachine.readVariable(variable)
-	variable_value++
-	zmachine.writeVariable(variable_value, variable)
+	value := variable.Read()
+	value++
+	variable.Write(value)
 
-	return zmachine.performBranch(instruction.Branch, variable_value > value), nil
+	return zmachine.performBranch(instruction.Branch, value > condition), nil
 }
 
 func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
@@ -203,7 +203,7 @@ func loadb(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	index := instruction.Operands[1].asInt()
 
 	value, _ := zmachine.readByte(array.OffsetBytes(index))
-	zmachine.writeVariable(memory.Word(value), instruction.StoreVariable)
+	instruction.StoreVariable.Write(memory.Word(value))
 
 	return false, nil
 }
@@ -215,7 +215,7 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	address := array.OffsetWords(word_index)
 	value, _ := zmachine.readWord(address)
 
-	zmachine.writeVariable(value, instruction.StoreVariable)
+	instruction.StoreVariable.Write(value)
 	return false, nil
 }
 
@@ -313,10 +313,10 @@ func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	variable := instruction.Operands[0].asVarNum()
+	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	value := instruction.Operands[0].asWord()
 
-	zmachine.writeVariable(value, variable)
+	variable.Write(value)
 	return false, nil
 }
 
@@ -333,7 +333,7 @@ func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func sub(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
-	zmachine.writeVariable(a-b, instruction.StoreVariable)
+	instruction.StoreVariable.Write(a - b)
 	return false, nil
 }
 

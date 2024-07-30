@@ -22,13 +22,17 @@ type Frame struct {
 	Stack          memory.Stack[memory.Word]
 	Locals         []memory.Word
 	DiscardReturn  bool
-	ReturnVariable VarNum
+	ReturnVariable Variable
+}
+
+func (zmachine *ZMachine) NewFrame() Frame {
+	return Frame{ReturnVariable: zmachine.getVariable(0)}
 }
 
 func (zmachine *ZMachine) endCurrentFrame(value memory.Word) {
 	frame := zmachine.Stack.Pop()
 	if !frame.DiscardReturn {
-		zmachine.writeVariable(value, frame.ReturnVariable)
+		frame.ReturnVariable.Write(value)
 	}
 }
 
@@ -105,7 +109,8 @@ func (zmachine *ZMachine) executeNextInstruction() error {
 			continue
 		}
 
-		instruction.Operands[i] = Operand(zmachine.readVariable(VarNum(instruction.Operands[i])))
+		variable := zmachine.getVariable(VarNum(instruction.Operands[i]))
+		instruction.Operands[i] = Operand(variable.Read())
 	}
 
 	counter_updated, err := instruction.Handler(zmachine, instruction)

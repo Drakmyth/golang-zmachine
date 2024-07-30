@@ -26,6 +26,10 @@ func (varnum VarNum) String() string {
 	}
 }
 
+func (varnum VarNum) isStack() bool {
+	return varnum == 0
+}
+
 func (varnum VarNum) isLocal() bool {
 	return MinLocalVarNum <= varnum && varnum <= MaxLocalVarNum
 }
@@ -42,36 +46,53 @@ func (varnum VarNum) asGlobal() int {
 	return int(varnum - MinGlobalVarNum)
 }
 
-func (zmachine ZMachine) getGlobal(index int) memory.Word {
-	global, _ := zmachine.readWord(zmachine.Header.GlobalsAddr.OffsetWords(index))
-	return global
+type Variable struct {
+	zmachine *ZMachine
+	Number   VarNum
 }
 
-func (zmachine *ZMachine) setGlobal(value memory.Word, index int) {
-	zmachine.writeWord(value, zmachine.Header.GlobalsAddr.OffsetWords(index))
+func (variable Variable) isStack() bool {
+	return variable.Number.isStack()
 }
 
-func (zmachine ZMachine) readVariable(index VarNum) memory.Word {
-	if index == 0 {
+func (variable Variable) isLocal() bool {
+	return variable.Number.isLocal()
+}
+
+func (variable Variable) isGlobal() bool {
+	return variable.Number.isGlobal()
+}
+
+func (variable Variable) Read() memory.Word {
+	zmachine := variable.zmachine
+
+	if variable.isStack() {
 		return zmachine.Stack.Peek().Stack.Pop()
-	} else if index.isLocal() {
-		return zmachine.Stack.Peek().Locals[index.asLocal()]
+	} else if variable.isLocal() {
+		return zmachine.Stack.Peek().Locals[variable.Number.asLocal()]
 	} else {
-		return zmachine.getGlobal(index.asGlobal())
+		global, _ := zmachine.readWord(zmachine.Header.GlobalsAddr.OffsetWords(variable.Number.asGlobal()))
+		return global
 	}
 }
 
-func (zmachine *ZMachine) writeVariable(value memory.Word, index VarNum) {
-	if index == 0 {
+func (variable *Variable) Write(value memory.Word) {
+	zmachine := variable.zmachine
+
+	if variable.isStack() {
 		zmachine.Stack.Peek().Stack.Push(value)
-	} else if index.isLocal() {
-		zmachine.Stack.Peek().Locals[index.asLocal()] = value
+	} else if variable.isLocal() {
+		zmachine.Stack.Peek().Locals[variable.Number.asLocal()] = value
 	} else {
-		zmachine.setGlobal(value, index.asGlobal())
+		zmachine.writeWord(value, zmachine.Header.GlobalsAddr.OffsetWords(variable.Number.asGlobal()))
 	}
 }
 
-func (zmachine ZMachine) readVarNum(address memory.Address) (VarNum, memory.Address) {
+func (zmachine *ZMachine) getVariable(index VarNum) Variable {
+	return Variable{zmachine, index}
+}
+
+func (zmachine *ZMachine) readVariable(address memory.Address) (Variable, memory.Address) {
 	varnum_byte, next_address := zmachine.readByte(address)
-	return VarNum(varnum_byte), next_address
+	return Variable{zmachine, VarNum(varnum_byte)}, next_address
 }

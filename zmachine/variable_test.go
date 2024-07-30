@@ -56,37 +56,38 @@ func TestVarNum_isGlobal_InRange(t *testing.T) {
 	}
 }
 
-func TestZMachine_getGlobal(t *testing.T) {
+func TestVariable_Read_Global(t *testing.T) {
 	zmachine := ZMachine{}
 	zmachine.init(make([]byte, 1000))
 	zmachine.Header.GlobalsAddr = memory.Address(0x01f4)
 
-	global_num := 2
-	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)
+	global_num := VarNum(0x12)
+	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num.asGlobal())
 	expected := memory.Word(0xbeef)
 
 	zmachine.Memory[address] = expected.HighByte()
 	zmachine.Memory[address.OffsetBytes(1)] = expected.LowByte()
-	got := zmachine.getGlobal(global_num)
+	got := zmachine.getVariable(global_num).Read()
 
 	AssertEqual(t, expected, got)
 }
 
-func TestZMachine_setGlobal(t *testing.T) {
+func TestVariable_Write_Global(t *testing.T) {
 	zmachine := ZMachine{}
 	zmachine.init(make([]byte, 1000))
 	zmachine.Header.GlobalsAddr = memory.Address(0x01f4)
 
-	global_num := 2
-	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num)
+	global_num := VarNum(0x12)
+	address := zmachine.Header.GlobalsAddr.OffsetWords(global_num.asGlobal())
 	initial := memory.Word(0xfeed)
 	expected := memory.Word(0xbeef)
 
 	zmachine.Memory[address] = initial.HighByte()
 	zmachine.Memory[address.OffsetBytes(1)] = initial.LowByte()
 
-	zmachine.setGlobal(expected, global_num)
-	got := zmachine.getGlobal(global_num)
+	variable := zmachine.getVariable(global_num)
+	variable.Write(expected)
+	got := variable.Read()
 
 	AssertEqual(t, expected, got)
 }
