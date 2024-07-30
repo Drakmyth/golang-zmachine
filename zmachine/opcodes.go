@@ -34,6 +34,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
 	0xe3: {IF_Variable, IM_None, []OperandType{}, put_prop},
+	0xe5: {IF_Variable, IM_None, []OperandType{}, print_char},
 	0xe6: {IF_Variable, IM_None, []OperandType{}, print_num},
 }
 
@@ -241,6 +242,18 @@ func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // 	zmachine.read_zstring(address)
 // 	return false, nil
 // }
+
+func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	a := instruction.Operands[0].asByte()
+
+	// TODO: This should convert to ZSCII rather than ASCII/Unicode
+	fmt.Print(string(a))
+	if zmachine.Debug {
+		fmt.Println()
+	}
+
+	return false, nil
+}
 
 func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asInt()
