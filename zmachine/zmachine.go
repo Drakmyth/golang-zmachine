@@ -84,10 +84,8 @@ func (zmachine ZMachine) readWord(address memory.Address) (memory.Word, memory.A
 }
 
 func (zmachine *ZMachine) writeWord(value memory.Word, address memory.Address) {
-	high := byte(value >> 8)
-	low := byte(value)
-	zmachine.Memory[address] = high
-	zmachine.Memory[address.OffsetBytes(1)] = low
+	zmachine.Memory[address] = value.HighByte()
+	zmachine.Memory[address.OffsetBytes(1)] = value.LowByte()
 }
 
 func (zmachine *ZMachine) executeNextInstruction() error {
