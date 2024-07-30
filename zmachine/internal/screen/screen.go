@@ -2,6 +2,12 @@ package screen
 
 import "fmt"
 
+// See https://en.wikipedia.org/wiki/ANSI_escape_code for escape code definitions
+
+const ANSI_EraseInDisplay_EntireScreen = "\033[2J"
+const ANSI_EraseInDisplay_EntireScreenAndScrollback = "\033[3J" // At least in PowerShell this seems to only clear scrollback and not the screen
+const ANSI_CursorPosition_BottomLeft = "\033[999;1H"
+
 func Clear() {
 	clearScreen()
 	eraseScrollback()
@@ -9,14 +15,13 @@ func Clear() {
 }
 
 func clearScreen() {
-	fmt.Print("\033[2J")
+	fmt.Print(ANSI_EraseInDisplay_EntireScreen)
 }
 
 func eraseScrollback() {
-	fmt.Print("\033[3J")
+	fmt.Print(ANSI_EraseInDisplay_EntireScreenAndScrollback)
 }
 
 func resetCursor() {
-	// fmt.Print("\033[H")
-	fmt.Print("\033[999;1H")
+	fmt.Print(ANSI_CursorPosition_BottomLeft)
 }
