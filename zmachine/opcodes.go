@@ -27,6 +27,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
+	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
 	0xbb: {IF_Short, IM_None, []OperandType{}, new_line},
 	0xc9: {IF_Variable, IM_Store, []OperandType{}, and},
@@ -291,6 +292,11 @@ func ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := instruction.Operands[0].asWord()
 
 	zmachine.endCurrentFrame(value)
+	return true, nil
+}
+
+func rtrue(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	zmachine.endCurrentFrame(1)
 	return true, nil
 }
 
