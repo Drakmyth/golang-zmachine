@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/zmachine"
 	"github.com/spf13/cobra"
 )
@@ -27,20 +28,13 @@ In other words, load and play the game!`,
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-
 		interpreter, err := zmachine.Load(args[0])
-		if err != nil {
-			fmt.Fprint(os.Stderr, err)
-			os.Exit(1)
-		}
+		assert.AssertNoError(err)
 
 		interpreter.Debug = debug
 
 		err = interpreter.Run()
-		if err != nil {
-			fmt.Fprint(os.Stderr, err)
-			os.Exit(1)
-		}
+		assert.AssertNoError(err)
 	},
 }
 
