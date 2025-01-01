@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
+	"github.com/Drakmyth/golang-zmachine/memory"
 )
 
 type InstructionForm uint8
@@ -117,7 +117,7 @@ func (zmachine ZMachine) readInstruction(address memory.Address) (Instruction, m
 	// Determine Variable Form operand types
 	if instruction.Form == IF_Variable {
 		var types_byte uint8
-		types_byte, next_address = zmachine.readByte(next_address)
+		types_byte, next_address = zmachine.Memory.ReadByteNext(next_address)
 
 		for shift := 0; shift <= 6; shift += 2 {
 			operand_type := OperandType((types_byte >> shift) & 0b11)
@@ -180,14 +180,14 @@ type Branch struct {
 
 func (zmachine ZMachine) readBranch(address memory.Address) (Branch, memory.Address) {
 	branch := Branch{}
-	branch_byte, next_address := zmachine.readByte(address)
+	branch_byte, next_address := zmachine.Memory.ReadByteNext(address)
 	branch.Condition = BranchCondition(branch_byte >> 7)
 
-	var offset memory.Word
-	offset = memory.Word(branch_byte & 0b00111111)
+	var offset word
+	offset = word(branch_byte & 0b00111111)
 	if ((branch_byte >> 6) & 0b01) == 0 {
-		branch_byte, next_address = zmachine.readByte(next_address)
-		offset = (offset << 8) | memory.Word(branch_byte)
+		branch_byte, next_address = zmachine.Memory.ReadByteNext(next_address)
+		offset = (offset << 8) | word(branch_byte)
 	}
 
 	switch offset {
@@ -202,10 +202,10 @@ func (zmachine ZMachine) readBranch(address memory.Address) (Branch, memory.Addr
 	return branch, next_address
 }
 
-type Operand memory.Word
+type Operand word
 
-func (operand Operand) asWord() memory.Word {
-	return memory.Word(operand)
+func (operand Operand) asWord() word {
+	return word(operand)
 }
 
 func (operand Operand) asByte() byte {
@@ -227,12 +227,12 @@ func (operand Operand) asInt() int {
 func (zmachine ZMachine) readOperand(optype OperandType, address memory.Address) (Operand, memory.Address) {
 	switch optype {
 	case OT_Large:
-		opvalue, next_address := zmachine.readWord(address)
+		opvalue, next_address := zmachine.Memory.ReadWordNext(address)
 		return Operand(opvalue), next_address
 	case OT_Small:
 		fallthrough
 	case OT_Variable:
-		opvalue, next_address := zmachine.readByte(address)
+		opvalue, next_address := zmachine.Memory.ReadByteNext(address)
 		return Operand(opvalue), next_address
 	default:
 		return 0, address

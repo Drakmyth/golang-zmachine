@@ -3,7 +3,7 @@ package zmachine
 import (
 	"fmt"
 
-	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
+	"github.com/Drakmyth/golang-zmachine/memory"
 )
 
 type VarNum uint8
@@ -63,7 +63,7 @@ func (variable Variable) isGlobal() bool {
 	return variable.Number.isGlobal()
 }
 
-func (variable Variable) Read() memory.Word {
+func (variable Variable) Read() word {
 	zmachine := variable.zmachine
 
 	if variable.isStack() {
@@ -71,12 +71,12 @@ func (variable Variable) Read() memory.Word {
 	} else if variable.isLocal() {
 		return zmachine.Stack.Peek().Locals[variable.Number.asLocal()]
 	} else {
-		global, _ := zmachine.readWord(zmachine.Header.GlobalsAddr.OffsetWords(variable.Number.asGlobal()))
+		global := zmachine.Memory.ReadWord(zmachine.Memory.GetGlobalsAddress().OffsetWords(variable.Number.asGlobal()))
 		return global
 	}
 }
 
-func (variable *Variable) Write(value memory.Word) {
+func (variable *Variable) Write(value word) {
 	zmachine := variable.zmachine
 
 	if variable.isStack() {
@@ -84,7 +84,7 @@ func (variable *Variable) Write(value memory.Word) {
 	} else if variable.isLocal() {
 		zmachine.Stack.Peek().Locals[variable.Number.asLocal()] = value
 	} else {
-		zmachine.writeWord(value, zmachine.Header.GlobalsAddr.OffsetWords(variable.Number.asGlobal()))
+		zmachine.Memory.WriteWord(zmachine.Memory.GetGlobalsAddress().OffsetWords(variable.Number.asGlobal()), value)
 	}
 }
 
@@ -93,6 +93,6 @@ func (zmachine *ZMachine) getVariable(index VarNum) Variable {
 }
 
 func (zmachine *ZMachine) readVariable(address memory.Address) (Variable, memory.Address) {
-	varnum_byte, next_address := zmachine.readByte(address)
+	varnum_byte, next_address := zmachine.Memory.ReadByteNext(address)
 	return Variable{zmachine, VarNum(varnum_byte)}, next_address
 }

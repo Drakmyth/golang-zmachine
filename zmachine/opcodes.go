@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
+	"github.com/Drakmyth/golang-zmachine/memory"
 )
 
 type Opcode uint16
@@ -42,31 +42,31 @@ var opcodes = map[Opcode]InstructionInfo{
 }
 
 func (zmachine ZMachine) readOpcode(address memory.Address) (Opcode, memory.Address) {
-	opcode, next_address := zmachine.readByte(address)
+	opcode, next_address := zmachine.Memory.ReadByteNext(address)
 
 	if opcode == 0xbe {
-		var ext_opcode memory.Word
-		ext_opcode, next_address = zmachine.readWord(address)
+		var ext_opcode word
+		ext_opcode, next_address = zmachine.Memory.ReadWordNext(address)
 		return Opcode(ext_opcode), next_address
 	}
 
 	return Opcode(opcode), next_address
 }
 
-func (zmachine ZMachine) getRoutineAddress(address memory.Address) memory.Address {
-	switch zmachine.Header.Version {
-	case 1, 2, 3:
-		return address * 2
-	case 4, 5:
-		return address * 4
-	case 6, 7:
-		return address*4 + zmachine.Header.RoutinesAddr*8
-	case 8:
-		return address * 8
-	}
+// func (zmachine ZMachine) getRoutineAddress(address memory.Address) memory.Address {
+// 	switch zmachine.Memory.GetVersion() {
+// 	case 1, 2, 3:
+// 		return address * 2
+// 	case 4, 5:
+// 		return address * 4
+// 	case 6, 7:
+// 		return address*4 + zmachine.Header.RoutinesAddr*8
+// 	case 8:
+// 		return address * 8
+// 	}
 
-	panic("Unknown version")
-}
+// 	panic("Unknown version")
+// }
 
 func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
 	if branch.Condition == BC_OnTrue && condition ||
@@ -102,19 +102,19 @@ func and(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	packed_address := instruction.Operands[0].asAddress()
+	packed_address := instruction.Operands[0].asWord()
 	if packed_address == 0 {
 		return false, errors.New("unimplemented: call address 0")
 	}
 
-	routineAddr := zmachine.getRoutineAddress(packed_address)
-	num_locals, next_address := zmachine.readByte(routineAddr)
+	routineAddr := zmachine.Memory.RoutinePackedAddress(packed_address)
+	num_locals, next_address := zmachine.Memory.ReadByteNext(routineAddr)
 	frame := zmachine.NewFrame()
-	frame.Locals = make([]memory.Word, 0, num_locals)
+	frame.Locals = make([]word, 0, num_locals)
 	for range num_locals {
-		var local memory.Word
-		if zmachine.Header.Version < 5 {
-			local, next_address = zmachine.readWord(next_address)
+		var local word
+		if zmachine.Memory.GetVersion() < 5 {
+			local, next_address = zmachine.Memory.ReadWordNext(next_address)
 		} else {
 			local = 0
 		}
@@ -202,8 +202,8 @@ func loadb(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	array := instruction.Operands[0].asAddress()
 	index := instruction.Operands[1].asInt()
 
-	value, _ := zmachine.readByte(array.OffsetBytes(index))
-	instruction.StoreVariable.Write(memory.Word(value))
+	value := zmachine.Memory.ReadByte(array.OffsetBytes(index))
+	instruction.StoreVariable.Write(word(value))
 
 	return false, nil
 }
@@ -213,7 +213,7 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	word_index := instruction.Operands[1].asInt()
 
 	address := array.OffsetWords(word_index)
-	value, _ := zmachine.readWord(address)
+	value := zmachine.Memory.ReadWord(address)
 
 	instruction.StoreVariable.Write(value)
 	return false, nil
@@ -279,10 +279,10 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	property_data_length := len(properties.Properties[property_index])
 	switch property_data_length {
 	case 1:
-		properties.Properties[property_index][0] = value.LowByte()
+		properties.Properties[property_index][0] = byte(value)
 	case 2:
-		properties.Properties[property_index][0] = value.HighByte()
-		properties.Properties[property_index][1] = value.LowByte()
+		properties.Properties[property_index][0] = byte(value >> 8)
+		properties.Properties[property_index][1] = byte(value)
 	default:
 		return false, fmt.Errorf("unsupported put_prop data length: %d", property_data_length)
 	}
@@ -308,7 +308,7 @@ func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := instruction.Operands[2].asWord()
 
 	address := array.OffsetWords(word_index)
-	zmachine.writeWord(value, address)
+	zmachine.Memory.WriteWord(address, value)
 	return false, nil
 }
 

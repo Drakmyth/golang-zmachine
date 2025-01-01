@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/Drakmyth/golang-zmachine/zmachine/internal/memory"
+	"github.com/Drakmyth/golang-zmachine/memory"
 )
 
 type ZStringKeyboard struct {
@@ -85,12 +85,12 @@ func (keyboard *ZStringKeyboard) print(zchars []byte) (string, error) {
 }
 
 func (zmachine ZMachine) readZString(address memory.Address) (string, memory.Address) {
-	words := make([]memory.Word, 0)
-	zstr_word, next_address := zmachine.readWord(address)
+	words := make([]word, 0)
+	zstr_word, next_address := zmachine.Memory.ReadWordNext(address)
 	words = append(words, zstr_word)
 
 	for zstr_word>>15 == 0 {
-		zstr_word, next_address = zmachine.readWord(next_address)
+		zstr_word, next_address = zmachine.Memory.ReadWordNext(next_address)
 		words = append(words, zstr_word)
 	}
 
@@ -101,7 +101,7 @@ func (zmachine ZMachine) readZString(address memory.Address) (string, memory.Add
 		zchars = append(zchars, byte(word&0b11111))
 	}
 
-	keyboard := ZStringKeyboard{ZMachine: zmachine, Version: zmachine.Header.Version}
+	keyboard := ZStringKeyboard{ZMachine: zmachine, Version: zmachine.Memory.GetVersion()}
 	str, err := keyboard.print(zchars)
 	if err != nil {
 		panic(err)
@@ -110,8 +110,8 @@ func (zmachine ZMachine) readZString(address memory.Address) (string, memory.Add
 }
 
 func (zmachine ZMachine) getAbbreviation(index byte, control byte) string {
-	abbr_entry := zmachine.Header.AbbreviationsAddr.OffsetWords(int((32*(control-1) + index)))
-	address, _ := zmachine.readWord(abbr_entry)
-	abbreviation, _ := zmachine.readZString(memory.Address(address * 2))
+	abbr_entry := zmachine.Memory.GetAbbreviationsAddress().OffsetWords(int((32*(control-1) + index)))
+	address := zmachine.Memory.ReadWord(abbr_entry)
+	abbreviation, _ := zmachine.readZString(memory.WordAddress(address))
 	return abbreviation
 }
