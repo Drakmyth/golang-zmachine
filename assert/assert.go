@@ -1,16 +1,11 @@
 package assert
 
 import (
+	"cmp"
 	"slices"
 )
 
-type numeric interface {
-	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-		~int | ~int8 | ~int16 | ~int32 | ~int64 |
-		~float32 | ~float64 | ~uintptr
-}
-
-func Between[E numeric](inclusiveMin E, exclusiveMax E, v E, message string) {
+func Between[E cmp.Ordered](inclusiveMin E, exclusiveMax E, v E, message string) {
 	if v < inclusiveMin || v >= exclusiveMax {
 		panic(message)
 	}

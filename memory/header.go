@@ -119,7 +119,6 @@ func (m Memory) GetVersion() byte {
 }
 
 func (m Memory) GetInitialProgramCounter() Address {
-	// TODO: Confirm if WordAddress is the correct call here
 	return Address(m.ReadWord(Addr_ROM_A_InitialProgramCounter))
 }
 

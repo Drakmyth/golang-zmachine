@@ -36,7 +36,7 @@ func TestStack(t *testing.T) {
 	}
 }
 
-func assertSame(t *testing.T, expected int, actual int, message string) {
+func assertSame[E comparable](t *testing.T, expected E, actual E, message string) {
 	if expected != actual {
 		t.Error(message)
 	}
