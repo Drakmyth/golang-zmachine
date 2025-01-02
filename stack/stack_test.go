@@ -2,6 +2,8 @@ package stack
 
 import (
 	"testing"
+
+	"github.com/Drakmyth/golang-zmachine/testassert"
 )
 
 func TestStack(t *testing.T) {
@@ -16,28 +18,23 @@ func TestStack(t *testing.T) {
 	for name, s := range tests {
 		t.Run(name, func(t *testing.T) {
 			stack := Stack[int]{}
-			assertSame(t, 0, stack.Size(), "Stack not empty on init")
+
+			testassert.Same(t, 0, stack.Size()) // "Stack not empty on init"
 
 			for i, v := range s.input {
 				stack.Push(v)
-				assertSame(t, i+1, stack.Size(), "Incorrect stack size after push")
-				assertSame(t, v, *stack.Peek(), "Incorrect top element peeked")
+				testassert.Same(t, i+1, stack.Size()) // "Incorrect stack size after push"
+				testassert.Same(t, v, *stack.Peek())  // "Incorrect top element peeked"
 			}
 
-			assertSame(t, len(s.input), stack.Size(), "Incorrect stack size before pop")
+			testassert.Same(t, len(s.input), stack.Size()) // "Incorrect stack size before pop"
 			for j := range s.input {
 				i := len(s.input) - j - 1
 				v := s.input[i]
 				v2 := stack.Pop()
-				assertSame(t, v, v2, "Incorrect element popped")
-				assertSame(t, i, stack.Size(), "Incorrect stack size after pop")
+				testassert.Same(t, v, v2)           // "Incorrect element popped"
+				testassert.Same(t, i, stack.Size()) // "Incorrect stack size after pop"
 			}
 		})
-	}
-}
-
-func assertSame[E comparable](t *testing.T, expected E, actual E, message string) {
-	if expected != actual {
-		t.Error(message)
 	}
 }
