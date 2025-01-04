@@ -1,10 +1,11 @@
 package zmachine
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
+	"github.com/Drakmyth/golang-zmachine/screen"
 )
 
 type Opcode uint16
@@ -85,27 +86,25 @@ func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
 	return false
 }
 
-func add(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func add(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
 
 	instruction.StoreVariable.Write(a + b)
-	return false, nil
+	return false
 }
 
-func and(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func and(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
 
 	instruction.StoreVariable.Write(a & b)
-	return false, nil
+	return false
 }
 
-func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func call(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	packed_address := instruction.Operands[0].asWord()
-	if packed_address == 0 {
-		return false, errors.New("unimplemented: call address 0")
-	}
+	assert.NotSame(packed_address, 0, "unimplemented: call address 0")
 
 	routineAddr := zmachine.Memory.RoutinePackedAddress(packed_address)
 	num_locals, next_address := zmachine.Memory.ReadByteNext(routineAddr)
@@ -133,10 +132,10 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	}
 
 	zmachine.Stack.Push(frame)
-	return false, nil // Return false because the previous frame hasn't been updated yet even though there is a new frame
+	return false // Return false because the previous frame hasn't been updated yet even though there is a new frame
 }
 
-func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func dec(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
@@ -146,10 +145,10 @@ func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value--
 	variable.Write(value)
 
-	return false, nil
+	return false
 }
 
-func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func dec_chk(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	condition := instruction.Operands[1].asWord()
 
@@ -160,10 +159,10 @@ func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value--
 	variable.Write(value)
 
-	return zmachine.performBranch(instruction.Branch, value < condition), nil
+	return zmachine.performBranch(instruction.Branch, value < condition)
 }
 
-func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func inc_chk(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	condition := instruction.Operands[1].asWord()
 
@@ -174,41 +173,41 @@ func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value++
 	variable.Write(value)
 
-	return zmachine.performBranch(instruction.Branch, value > condition), nil
+	return zmachine.performBranch(instruction.Branch, value > condition)
 }
 
-func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func je(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
 
-	return zmachine.performBranch(instruction.Branch, a == b), nil
+	return zmachine.performBranch(instruction.Branch, a == b)
 }
 
-func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func jump(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	offset := instruction.Operands[0].asInt()
 
 	frame := zmachine.Stack.Peek()
 	frame.Counter = instruction.NextAddress.OffsetBytes(offset - 2)
-	return true, nil
+	return true
 }
 
-func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func jz(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	a := instruction.Operands[0].asWord()
 
-	return zmachine.performBranch(instruction.Branch, a == 0), nil
+	return zmachine.performBranch(instruction.Branch, a == 0)
 }
 
-func loadb(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func loadb(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	array := instruction.Operands[0].asAddress()
 	index := instruction.Operands[1].asInt()
 
 	value := zmachine.Memory.ReadByte(array.OffsetBytes(index))
 	instruction.StoreVariable.Write(word(value))
 
-	return false, nil
+	return false
 }
 
-func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func loadw(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	array := instruction.Operands[0].asAddress()
 	word_index := instruction.Operands[1].asInt()
 
@@ -216,16 +215,22 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := zmachine.Memory.ReadWord(address)
 
 	instruction.StoreVariable.Write(value)
-	return false, nil
+	return false
 }
 
-func new_line(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func new_line(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	fmt.Println()
-	return false, nil
+	return false
 }
 
-func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func print(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	str, next_address := zmachine.readZString(instruction.NextAddress)
+
+	screen.PrintText(str)
+	// for i, r := range str {
+
+	// screen.SetContent(i, 0, r, nil, tcell.StyleDefault)
+	// }
 	fmt.Print(str)
 	if zmachine.Debug {
 		fmt.Println()
@@ -237,16 +242,16 @@ func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
 		Condition: BC_OnTrue,
 	}
 
-	return zmachine.performBranch(branch, true), nil
+	return zmachine.performBranch(branch, true)
 }
 
-// func print_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+// func print_addr(zmachine *ZMachine, instruction Instruction) bool {
 // 	address := instruction.Operands[0].asAddress()
 // 	zmachine.read_zstring(address)
-// 	return false, nil
+// 	return false
 // }
 
-func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func print_char(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	a := instruction.Operands[0].asByte()
 
 	// TODO: This should convert to ZSCII rather than ASCII/Unicode
@@ -255,20 +260,20 @@ func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
 		fmt.Println()
 	}
 
-	return false, nil
+	return false
 }
 
-func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func print_num(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	a := instruction.Operands[0].asInt()
 	fmt.Printf("%v", a)
 	if zmachine.Debug {
 		fmt.Println()
 	}
 
-	return false, nil
+	return false
 }
 
-func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func put_prop(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	object_index := instruction.Operands[0].asInt()
 	property_index := instruction.Operands[1].asByte()
 	value := instruction.Operands[2].asWord()
@@ -277,50 +282,49 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	properties, _ := zmachine.readProperties(object.PropertiesAddr)
 
 	property_data_length := len(properties.Properties[property_index])
+	assert.Between(1, 3, property_data_length, "unsupported put_prop data length: %d", property_data_length)
 	switch property_data_length {
 	case 1:
 		properties.Properties[property_index][0] = byte(value)
 	case 2:
 		properties.Properties[property_index][0] = byte(value >> 8)
 		properties.Properties[property_index][1] = byte(value)
-	default:
-		return false, fmt.Errorf("unsupported put_prop data length: %d", property_data_length)
 	}
 
-	return false, nil
+	return false
 }
 
-func ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func ret(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	value := instruction.Operands[0].asWord()
 
 	zmachine.endCurrentFrame(value)
-	return true, nil
+	return true
 }
 
-func rtrue(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func rtrue(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	zmachine.endCurrentFrame(1)
-	return true, nil
+	return true
 }
 
-func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func storew(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	array := instruction.Operands[0].asAddress()
 	word_index := instruction.Operands[1].asInt()
 	value := instruction.Operands[2].asWord()
 
 	address := array.OffsetWords(word_index)
 	zmachine.Memory.WriteWord(address, value)
-	return false, nil
+	return false
 }
 
-func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func store(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	value := instruction.Operands[0].asWord()
 
 	variable.Write(value)
-	return false, nil
+	return false
 }
 
-// func storeb(zmachine *ZMachine, instruction Instruction) (bool, error) {
+// func storeb(zmachine *ZMachine, instruction Instruction) bool {
 // array := instruction.Operands[0].asAddress()
 // byte_index := instruction.Operands[1].asInt()
 // value := instruction.Operands[2].asByte()
@@ -330,16 +334,16 @@ func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // 	return false, nil
 // }
 
-func sub(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func sub(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
 	instruction.StoreVariable.Write(a - b)
-	return false, nil
+	return false
 }
 
-func test_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+func test_attr(zmachine *ZMachine, instruction Instruction, screen *screen.Screen) bool {
 	object_index := instruction.Operands[0].asInt()
 	attribute_index := instruction.Operands[1].asInt()
 
-	return zmachine.performBranch(instruction.Branch, zmachine.getObject(object_index).hasAttribute(attribute_index)), nil
+	return zmachine.performBranch(instruction.Branch, zmachine.getObject(object_index).hasAttribute(attribute_index))
 }

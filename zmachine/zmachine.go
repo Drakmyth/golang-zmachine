@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/Drakmyth/golang-zmachine/memory"
+	"github.com/Drakmyth/golang-zmachine/screen"
 	"github.com/Drakmyth/golang-zmachine/stack"
-	"github.com/Drakmyth/golang-zmachine/zmachine/internal/screen"
 )
 
 type word = uint16
@@ -51,22 +51,20 @@ func Load(story_path string) (*ZMachine, error) {
 }
 
 func (zmachine ZMachine) Run() error {
-	screen.Clear()
+	s := screen.NewScreen()
 	for {
-		err := zmachine.executeNextInstruction()
-		if err != nil {
-			return err
-		}
+		zmachine.executeNextInstruction(s)
+
+		// for ev := range s.Events {
+		// 	handleEvent(ev, s)
+		// }
 	}
 }
 
-func (zmachine *ZMachine) executeNextInstruction() error {
+func (zmachine *ZMachine) executeNextInstruction(screen *screen.Screen) {
 	frame := zmachine.Stack.Peek()
 
-	instruction, next_address, err := zmachine.readInstruction(frame.Counter)
-	if err != nil {
-		return err
-	}
+	instruction, next_address := zmachine.readInstruction(frame.Counter)
 
 	if zmachine.Debug {
 		fmt.Printf("%x: %s\n", frame.Counter, instruction)
@@ -81,13 +79,9 @@ func (zmachine *ZMachine) executeNextInstruction() error {
 		instruction.Operands[i] = Operand(variable.Read())
 	}
 
-	counter_updated, err := instruction.Handler(zmachine, instruction)
-	if err != nil {
-		return err
-	}
+	counter_updated := instruction.Handler(zmachine, instruction, screen)
 
 	if !counter_updated {
 		frame.Counter = next_address
 	}
-	return err
 }

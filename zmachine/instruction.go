@@ -7,7 +7,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
+	"github.com/Drakmyth/golang-zmachine/screen"
 )
 
 type InstructionForm uint8
@@ -37,7 +39,7 @@ const (
 	OT_Omitted  OperandType = 3
 )
 
-type InstructionHandler func(*ZMachine, Instruction) (bool, error)
+type InstructionHandler func(*ZMachine, Instruction, *screen.Screen) bool
 
 type InstructionInfo struct {
 	Form         InstructionForm
@@ -102,17 +104,13 @@ func (instruction Instruction) String() string {
 	return strings.Join(log_strings, " ")
 }
 
-func (zmachine ZMachine) readInstruction(address memory.Address) (Instruction, memory.Address, error) {
+func (zmachine ZMachine) readInstruction(address memory.Address) (Instruction, memory.Address) {
 	opcode, next_address := zmachine.readOpcode(address)
 	inst_info, ok := opcodes[opcode]
-	if !ok {
-		return Instruction{}, 0, fmt.Errorf("unknown opcode: %02x", opcode)
-	}
-	instruction := Instruction{InstructionInfo: inst_info, Opcode: opcode, Address: address}
+	assert.True(ok, "unknown opcode: %02x", opcode)
 
-	if instruction.Form == IF_Extended {
-		return Instruction{}, 0, fmt.Errorf("unimplemented: extended form instruction")
-	}
+	instruction := Instruction{InstructionInfo: inst_info, Opcode: opcode, Address: address}
+	assert.NotSame(instruction.Form, IF_Extended, "unimplemented: extended form instruction")
 
 	// Determine Variable Form operand types
 	if instruction.Form == IF_Variable {
@@ -154,7 +152,7 @@ func (zmachine ZMachine) readInstruction(address memory.Address) (Instruction, m
 	// }
 
 	instruction.NextAddress = next_address
-	return instruction, next_address, nil
+	return instruction, next_address
 }
 
 type BranchBehavior uint8
