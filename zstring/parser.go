@@ -1,12 +1,13 @@
 package zstring
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strings"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
 )
+
+type word = uint16
 
 /*
  * Input Truncation
@@ -112,7 +113,7 @@ func parseZCharacters(data ZString) []ZChar {
 
 	lastWord := false
 	for i := 0; i < len(data); i += 2 {
-		zword := binary.BigEndian.Uint16(data[i : i+2])
+		zword := word(data[i])<<8 | word(data[i+1])
 		zchar1 := ZChar((zword >> 10) & MASK_ZChar)
 		zchar2 := ZChar((zword >> 5) & MASK_ZChar)
 		zchar3 := ZChar(zword & MASK_ZChar)

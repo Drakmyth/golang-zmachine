@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
@@ -85,7 +84,7 @@ func (o Object) GetParent() ObjectId {
 	if o.version <= 3 {
 		return ObjectId(o.data[idxV1_Parent])
 	} else {
-		return ObjectId(binary.BigEndian.Uint16(o.data[idxV4_Parent : idxV4_Parent+1]))
+		return ObjectId(word(o.data[idxV4_Parent])<<8 | word(o.data[idxV4_Parent+1]))
 	}
 }
 
@@ -93,7 +92,7 @@ func (o Object) GetSibling() ObjectId {
 	if o.version <= 3 {
 		return ObjectId(o.data[idxV1_Sibling])
 	} else {
-		return ObjectId(binary.BigEndian.Uint16(o.data[idxV4_Sibling : idxV4_Sibling+1]))
+		return ObjectId(word(o.data[idxV4_Sibling])<<8 | word(o.data[idxV4_Sibling+1]))
 	}
 }
 
@@ -101,7 +100,7 @@ func (o Object) GetChild() ObjectId {
 	if o.version <= 3 {
 		return ObjectId(o.data[idxV1_Child])
 	} else {
-		return ObjectId(binary.BigEndian.Uint16(o.data[idxV4_Child : idxV4_Child+1]))
+		return ObjectId(word(o.data[idxV4_Child])<<8 | word(o.data[idxV4_Child+1]))
 	}
 }
 
@@ -109,7 +108,8 @@ func (o *Object) SetParent(parent ObjectId) {
 	if o.version <= 3 {
 		o.data[idxV1_Parent] = byte(parent)
 	} else {
-		binary.BigEndian.PutUint16(o.data[idxV4_Parent:idxV4_Parent+1], word(parent))
+		o.data[idxV4_Parent] = byte(parent >> 8)
+		o.data[idxV4_Parent+1] = byte(parent)
 	}
 }
 
@@ -117,7 +117,8 @@ func (o *Object) SetSibling(sibling ObjectId) {
 	if o.version <= 3 {
 		o.data[idxV1_Sibling] = byte(sibling)
 	} else {
-		binary.BigEndian.PutUint16(o.data[idxV4_Parent:idxV4_Sibling+1], word(sibling))
+		o.data[idxV4_Sibling] = byte(sibling >> 8)
+		o.data[idxV4_Sibling+1] = byte(sibling)
 	}
 }
 
@@ -125,7 +126,8 @@ func (o *Object) SetChild(child ObjectId) {
 	if o.version <= 3 {
 		o.data[idxV1_Child] = byte(child)
 	} else {
-		binary.BigEndian.PutUint16(o.data[idxV4_Child:idxV4_Child+1], word(child))
+		o.data[idxV4_Child] = byte(child >> 8)
+		o.data[idxV4_Child+1] = byte(child)
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
-type Opcode uint16
+type Opcode word
 
 var opcodes = map[Opcode]InstructionInfo{
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},

@@ -17,7 +17,7 @@ func (m Memory) StringPackedAddress(address word) Address {
 	return packedAddress(address, m.GetVersion(), m.ReadWord(Addr_ROM_W_StringsOffset))
 }
 
-func packedAddress(address word, version int, offset uint16) Address {
+func packedAddress(address word, version int, offset word) Address {
 	assert.Between(1, 9, version, "Unknown Version.")
 
 	switch version {
