@@ -17,6 +17,12 @@ func GreaterThan[E cmp.Ordered](exclusiveMin E, v E, message string) {
 	}
 }
 
+func LessThan[E cmp.Ordered](exclusiveMax E, v E, message string) {
+	if v >= exclusiveMax {
+		panic(message)
+	}
+}
+
 func NoError(v error, message string) {
 	if v != nil {
 		panic(message)

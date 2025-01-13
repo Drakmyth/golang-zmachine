@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
@@ -48,14 +49,32 @@ type Object struct {
 }
 
 func (o Object) HasAttribute(index int) bool {
-	attributeLength := 4
+	maxAttributes := 32
 	if o.version > 3 {
-		attributeLength = 6
+		maxAttributes = 48
 	}
+	assert.LessThan(maxAttributes, index, "Invalid attribute index")
 
-	attributeData := o.data[idx_Attributes : idx_Attributes+attributeLength]
-	attributes := uint64(binary.BigEndian.Uint32(attributeData))
-	return (attributes>>(attributeLength-index))&0b1 == 1
+	bytesToSkip := index / 8
+	newIndex := index % 8
+
+	attributeByte := o.data[idx_Attributes+bytesToSkip]
+	return (attributeByte>>newIndex)&0b1 == 1
+}
+
+func (o Object) SetAttribute(index int) {
+	maxAttributes := 32
+	if o.version > 3 {
+		maxAttributes = 48
+	}
+	assert.LessThan(maxAttributes, index, "Invalid attribute index")
+
+	bytesToSkip := index / 8
+	newIndex := index % 8
+
+	attributeByte := o.data[idx_Attributes+bytesToSkip]
+	attributeByte = attributeByte | (0b1 << (7 - newIndex))
+	o.data[idx_Attributes+bytesToSkip] = attributeByte
 }
 
 func (o Object) GetParent() ObjectId {

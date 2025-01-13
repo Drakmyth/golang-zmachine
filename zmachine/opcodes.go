@@ -20,6 +20,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x30: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadb},
 	0x49: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, and},
 	0x4a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test_attr},
+	0x4b: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, set_attr},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
@@ -330,6 +331,15 @@ func ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func rtrue(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	zmachine.endCurrentFrame(1)
 	return true, nil
+}
+
+func set_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	object := instruction.Operands[0].asObjectId()
+	attribute := instruction.Operands[1].asInt()
+
+	zmachine.Memory.GetObject(object).SetAttribute(attribute)
+
+	return false, nil
 }
 
 func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
