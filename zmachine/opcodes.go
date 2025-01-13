@@ -18,6 +18,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
 	0x2d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, store},
 	0x30: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadb},
+	0x46: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, jin},
 	0x49: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, and},
 	0x4a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test_attr},
 	0x4b: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, set_attr},
@@ -28,9 +29,10 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x6e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, insert_obj},
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
-	// // 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
+	// 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
+	// 0xa3: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_parent},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
@@ -169,6 +171,14 @@ func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return zmachine.performBranch(instruction.Branch, value < condition), nil
 }
 
+func get_parent(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	object := zmachine.Memory.GetObject(instruction.Operands[0].asObjectId())
+	parent := object.GetParent()
+
+	instruction.StoreVariable.Write(word(parent))
+	return false, nil
+}
+
 func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	condition := instruction.Operands[1].asWord()
@@ -201,6 +211,13 @@ func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	b := instruction.Operands[1].asWord()
 
 	return zmachine.performBranch(instruction.Branch, a == b), nil
+}
+
+func jin(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	a := zmachine.Memory.GetObject(instruction.Operands[0].asObjectId())
+	b := instruction.Operands[1].asObjectId()
+
+	return zmachine.performBranch(instruction.Branch, a.GetParent() == b), nil
 }
 
 func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
