@@ -77,6 +77,10 @@ func (o Object) SetAttribute(index int) {
 	o.data[idx_Attributes+bytesToSkip] = attributeByte
 }
 
+func (o Object) GetShortName() zstring.ZString {
+	return o.shortName
+}
+
 func (o Object) GetParent() ObjectId {
 	if o.version <= 3 {
 		return ObjectId(o.data[idxV1_Parent])

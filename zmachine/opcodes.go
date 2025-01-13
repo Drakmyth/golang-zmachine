@@ -33,6 +33,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
 	// 0xa3: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_parent},
+	0xaa: {IF_Short, IM_None, []OperandType{OT_Variable}, print_obj},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
@@ -303,6 +304,16 @@ func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asInt()
 	fmt.Printf("%v", a)
+	if zmachine.Debug {
+		fmt.Println()
+	}
+
+	return false, nil
+}
+
+func print_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	o := zmachine.Memory.GetObject(instruction.Operands[0].asObjectId())
+	fmt.Printf("%v", zmachine.GetObjectShortName(o))
 	if zmachine.Debug {
 		fmt.Println()
 	}

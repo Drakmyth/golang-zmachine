@@ -6,14 +6,16 @@ import (
 	"github.com/Drakmyth/golang-zmachine/memory"
 	"github.com/Drakmyth/golang-zmachine/stack"
 	"github.com/Drakmyth/golang-zmachine/zmachine/internal/screen"
+	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
 type word = uint16
 
 type ZMachine struct {
-	Debug  bool
-	Memory *memory.Memory
-	Stack  stack.Stack[Frame]
+	Debug   bool
+	Memory  *memory.Memory
+	Stack   stack.Stack[Frame]
+	Charset zstring.Charset
 }
 
 type Frame struct {
@@ -38,9 +40,15 @@ func Load(story_path string) (*ZMachine, error) {
 
 	stack := append(make([]Frame, 0, 1024), Frame{Counter: memory.GetInitialProgramCounter()})
 
+	version := memory.GetVersion()
+	alphabet := memory.GetAlphabet()
+	ctrlchars := zstring.GetDefaultCtrlCharMapping(version)
+	charset := zstring.NewCharset(alphabet, ctrlchars)
+
 	zmachine := ZMachine{
-		Memory: memory,
-		Stack:  stack,
+		Memory:  memory,
+		Stack:   stack,
+		Charset: charset,
 	}
 
 	return &zmachine, nil
@@ -86,4 +94,10 @@ func (zmachine *ZMachine) executeNextInstruction() error {
 		frame.Counter = next_address
 	}
 	return err
+}
+
+func (zmachine ZMachine) GetObjectShortName(o memory.Object) string {
+	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
+	name := parser.Parse(o.GetShortName())
+	return name
 }
