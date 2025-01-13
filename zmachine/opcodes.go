@@ -41,6 +41,8 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xe3: {IF_Variable, IM_None, []OperandType{}, put_prop},
 	0xe5: {IF_Variable, IM_None, []OperandType{}, print_char},
 	0xe6: {IF_Variable, IM_None, []OperandType{}, print_num},
+	0xe8: {IF_Variable, IM_None, []OperandType{}, push},
+	0xe9: {IF_Variable, IM_None, []OperandType{}, pull}, // There's an extra argument here in V6
 }
 
 func (zmachine ZMachine) readOpcode(address memory.Address) (Opcode, memory.Address) {
@@ -286,6 +288,23 @@ func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	if zmachine.Debug {
 		fmt.Println()
 	}
+
+	return false, nil
+}
+
+func pull(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
+
+	value := zmachine.Stack.Peek().Stack.Pop()
+	variable.Write(value)
+
+	return false, nil
+}
+
+func push(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	value := instruction.Operands[0].asWord()
+
+	zmachine.Stack.Peek().Stack.Push(value)
 
 	return false, nil
 }
