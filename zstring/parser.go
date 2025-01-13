@@ -24,17 +24,17 @@ import (
  *   Complex unicode formatting is optionally supported in window 0 (but not 1)
  */
 
-type GetAbbreviationHandler func(int, int) ZString
+type GetAbbreviationHandler func(bank int, index int) ZString
 
-type Parser struct {
+type parser struct {
 	charset                 Charset
 	pendingAbbreviationBank int
 	UseAbbreviations        bool
 	getAbbreviation         GetAbbreviationHandler
 }
 
-func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) Parser {
-	return Parser{
+func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) parser {
+	return parser{
 		charset:                 charset,
 		pendingAbbreviationBank: 0,
 		UseAbbreviations:        true,
@@ -42,7 +42,7 @@ func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) Parser {
 	}
 }
 
-func (p Parser) Parse(data ZString) string {
+func (p parser) Parse(data ZString) string {
 	zchars := parseZCharacters(data)
 	builder := strings.Builder{}
 
@@ -54,7 +54,6 @@ func (p Parser) Parse(data ZString) string {
 		}
 
 		if zc < 6 {
-			// TODO: This will panic if zchars[i] is the last character
 			p.processControlCharacter(zc, &builder)
 			continue
 		}
@@ -76,7 +75,7 @@ func (p Parser) Parse(data ZString) string {
 	return builder.String()
 }
 
-func (p *Parser) processControlCharacter(zc ZChar, builder *strings.Builder) {
+func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) {
 	ctrl := p.charset.GetControlCharacter(zc)
 
 	switch ctrl {
@@ -131,10 +130,11 @@ func parseZCharacters(data ZString) []ZChar {
 	return zchars
 }
 
-func (p *Parser) processAbbreviation(bank int, index int, builder *strings.Builder) {
+func (p *parser) processAbbreviation(bank int, index int, builder *strings.Builder) {
 	abbreviation := p.getAbbreviation(bank, index)
+	oldValue := p.UseAbbreviations
 	p.UseAbbreviations = false
 	builder.WriteString(p.Parse(abbreviation))
-	p.UseAbbreviations = true
+	p.UseAbbreviations = oldValue
 	p.pendingAbbreviationBank = 0
 }

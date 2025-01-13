@@ -2,7 +2,7 @@ package zstring
 
 type ZString []byte
 
-func (z ZString) LenChars() int {
+func (z ZString) LenZChars() int {
 	return len(z) * 3
 }
 
