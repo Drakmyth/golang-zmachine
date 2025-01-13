@@ -24,10 +24,6 @@ type Frame struct {
 	ReturnVariable Variable
 }
 
-func (zmachine *ZMachine) NewFrame() Frame {
-	return Frame{ReturnVariable: zmachine.getVariable(0)}
-}
-
 func (zmachine *ZMachine) endCurrentFrame(value word) {
 	frame := zmachine.Stack.Pop()
 	if !frame.DiscardReturn {

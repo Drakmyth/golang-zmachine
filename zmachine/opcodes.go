@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Drakmyth/golang-zmachine/memory"
+	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
 type Opcode uint16
@@ -23,6 +24,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
 	0x61: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, je},
+	0x6e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, insert_obj},
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
 	// // 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
@@ -109,7 +111,8 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	routineAddr := zmachine.Memory.RoutinePackedAddress(packed_address)
 	num_locals, next_address := zmachine.Memory.ReadByteNext(routineAddr)
-	frame := zmachine.NewFrame()
+
+	frame := Frame{ReturnVariable: zmachine.getVariable(0)}
 	frame.Locals = make([]word, 0, num_locals)
 	for range num_locals {
 		var local word
@@ -177,6 +180,19 @@ func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return zmachine.performBranch(instruction.Branch, value > condition), nil
 }
 
+func insert_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	o := instruction.Operands[0].asObjectId()
+	d := instruction.Operands[1].asObjectId()
+
+	object := zmachine.Memory.GetObject(o)
+	destination := zmachine.Memory.GetObject(d)
+
+	object.SetSibling(destination.GetChild())
+	destination.SetChild(o)
+
+	return false, nil
+}
+
 func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 	b := instruction.Operands[1].asWord()
@@ -225,7 +241,13 @@ func new_line(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	str, next_address := zmachine.readZString(instruction.NextAddress)
+	zstr := zmachine.Memory.GetZString(instruction.NextAddress)
+	next_address := instruction.NextAddress.OffsetBytes(zstr.LenBytes())
+
+	charset := zstring.NewCharset(zmachine.Memory.GetAlphabet(), zstring.GetDefaultCtrlCharMapping(zmachine.Memory.GetVersion()))
+	parser := zstring.NewParser(charset, zmachine.Memory.GetAbbreviation)
+	str := parser.Parse(zstr)
+
 	fmt.Print(str)
 	if zmachine.Debug {
 		fmt.Println()
@@ -269,23 +291,12 @@ func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	object_index := instruction.Operands[0].asInt()
-	property_index := instruction.Operands[1].asByte()
+	object_index := instruction.Operands[0].asObjectId()
+	property_index := instruction.Operands[1].asPropertyId()
 	value := instruction.Operands[2].asWord()
 
-	object := zmachine.getObject(object_index)
-	properties, _ := zmachine.readProperties(object.PropertiesAddr)
-
-	property_data_length := len(properties.Properties[property_index])
-	switch property_data_length {
-	case 1:
-		properties.Properties[property_index][0] = byte(value)
-	case 2:
-		properties.Properties[property_index][0] = byte(value >> 8)
-		properties.Properties[property_index][1] = byte(value)
-	default:
-		return false, fmt.Errorf("unsupported put_prop data length: %d", property_data_length)
-	}
+	object := zmachine.Memory.GetObject(object_index)
+	object.SetProperty(property_index, value)
 
 	return false, nil
 }
@@ -338,8 +349,8 @@ func sub(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func test_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	object_index := instruction.Operands[0].asInt()
+	object_index := instruction.Operands[0].asObjectId()
 	attribute_index := instruction.Operands[1].asInt()
 
-	return zmachine.performBranch(instruction.Branch, zmachine.getObject(object_index).hasAttribute(attribute_index)), nil
+	return zmachine.performBranch(instruction.Branch, zmachine.Memory.GetObject(object_index).HasAttribute(attribute_index)), nil
 }

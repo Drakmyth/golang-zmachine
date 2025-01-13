@@ -224,6 +224,14 @@ func (operand Operand) asInt() int {
 	return int(operand)
 }
 
+func (operand Operand) asObjectId() memory.ObjectId {
+	return memory.ObjectId(operand)
+}
+
+func (operand Operand) asPropertyId() memory.PropertyId {
+	return memory.PropertyId(operand)
+}
+
 func (zmachine ZMachine) readOperand(optype OperandType, address memory.Address) (Operand, memory.Address) {
 	switch optype {
 	case OT_Large:

@@ -11,6 +11,12 @@ func Between[E cmp.Ordered](inclusiveMin E, exclusiveMax E, v E, message string)
 	}
 }
 
+func GreaterThan[E cmp.Ordered](exclusiveMin E, v E, message string) {
+	if v <= exclusiveMin {
+		panic(message)
+	}
+}
+
 func NoError(v error, message string) {
 	if v != nil {
 		panic(message)
@@ -25,6 +31,24 @@ func NotContains[S ~[]E, E comparable](s S, v E, message string) {
 
 func NotEmpty[S ~[]E, E any](s S, message string) {
 	if len(s) == 0 {
+		panic(message)
+	}
+}
+
+func Same[E comparable](v1 E, v2 E, message string) {
+	if v1 != v2 {
+		panic(message)
+	}
+}
+
+func True(v bool, message string) {
+	if !v {
+		panic(message)
+	}
+}
+
+func Length[S ~[]E, E any](s S, length int, message string) {
+	if len(s) != length {
 		panic(message)
 	}
 }
