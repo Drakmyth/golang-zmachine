@@ -19,10 +19,10 @@ var v1ThirdRow = []rune{
 	0x00, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '!', '?', '_', '#', '\'', '"', '/', '\\', '<', '-', ':', '(', ')',
 }
 
-type CtrlChar uint8
+type ctrlchar int
 
 const (
-	CTRL_Space CtrlChar = iota
+	CTRL_Space ctrlchar = iota
 	CTRL_NewLine
 	CTRL_Abbreviation
 	CTRL_Shift
@@ -31,47 +31,88 @@ const (
 	CTRL_BackshiftLock
 )
 
-type Charset struct {
-	alphabet       []rune
-	ctrlchars      []CtrlChar
-	baseCharset    uint8
-	currentCharset uint8
+type Charset interface {
+	Shift()
+	Backshift()
+	Lock()
+	PrintRune(zc ZChar) rune
+	GetControlCharacter(zc ZChar) ctrlchar
 }
 
-func NewCharset(alphabet []rune, ctrlchars []CtrlChar) Charset {
+type charset struct {
+	baseCharset    int
+	currentCharset int
+	ctrlchars      []ctrlchar
+}
+
+type staticCharset struct {
+	*charset
+
+	alphabet []rune
+}
+
+type dynamicCharset struct {
+	*charset
+
+	getAlphabet func() []rune
+}
+
+func NewStaticCharset(alphabet []rune, ctrlchars []ctrlchar) Charset {
 	assert.Length(alphabet, 78, "Invalid alphabet table length")
 	assert.Length(ctrlchars, 6, "Invalid count of control characters")
 
-	return Charset{
-		alphabet,
-		ctrlchars,
-		0,
-		0,
+	return staticCharset{
+		charset: &charset{
+			baseCharset:    0,
+			currentCharset: 0,
+			ctrlchars:      ctrlchars,
+		},
+		alphabet: alphabet,
 	}
 }
 
-func (c *Charset) Shift() {
-	c.currentCharset = (c.currentCharset + 1) % 3
+func NewDynamicCharset(alphabet func() []rune, ctrlchars []ctrlchar) Charset {
+	assert.Length(ctrlchars, 6, "Invalid count of control characters")
+
+	return dynamicCharset{
+		charset: &charset{
+			baseCharset:    0,
+			currentCharset: 0,
+			ctrlchars:      ctrlchars,
+		},
+		getAlphabet: alphabet,
+	}
 }
 
-func (c *Charset) Backshift() {
-	c.currentCharset = (c.currentCharset + 2) % 3 // adding length - 1 == subtracting 1
+func (c *charset) Shift() {
+	c.currentCharset = (c.baseCharset + 1) % 3
 }
 
-func (c *Charset) Lock() {
+func (c *charset) Backshift() {
+	c.currentCharset = (c.baseCharset + 2) % 3 // adding length - 1 == subtracting 1
+}
+
+func (c *charset) Lock() {
 	c.baseCharset = c.currentCharset
 }
 
-func (c *Charset) Reset() {
-	c.currentCharset = c.baseCharset
+func (c staticCharset) PrintRune(zc ZChar) rune {
+	return c.printRune(c.alphabet, zc)
 }
 
-func (c Charset) GetRune(zc ZChar) rune {
+func (c dynamicCharset) PrintRune(zc ZChar) rune {
+	return c.printRune(c.getAlphabet(), zc)
+}
+
+func (c *charset) printRune(alphabet []rune, zc ZChar) rune {
+	assert.Length(alphabet, 78, "Invalid alphabet table length")
 	assert.GreaterThan(5, zc, "Control ZCharacter not translatable to rune")
-	return c.alphabet[uint8(zc-6)+(c.currentCharset*26)]
+	r := alphabet[int(zc-6)+(c.currentCharset*26)]
+	c.currentCharset = c.baseCharset
+	return r
 }
 
-func (c Charset) GetControlCharacter(zc ZChar) CtrlChar {
+func (c charset) GetControlCharacter(zc ZChar) ctrlchar {
 	assert.Between(0, 6, zc, "Provided ZCharacter not in control range")
 	return c.ctrlchars[zc]
 }
@@ -88,7 +129,7 @@ func GetDefaultAlphabet(version int) []rune {
 	return alphabet
 }
 
-func GetDefaultCtrlCharMapping(version int) []CtrlChar {
+func GetDefaultCtrlCharMapping(version int) []ctrlchar {
 	/*
 	 * Control Characters
 	 *   Char | V1        | V2        | V3+
@@ -103,12 +144,12 @@ func GetDefaultCtrlCharMapping(version int) []CtrlChar {
 
 	switch version {
 	case 1, 2:
-		mapping := []CtrlChar{CTRL_Space, CTRL_NewLine, CTRL_Shift, CTRL_Backshift, CTRL_ShiftLock, CTRL_BackshiftLock}
+		mapping := []ctrlchar{CTRL_Space, CTRL_NewLine, CTRL_Shift, CTRL_Backshift, CTRL_ShiftLock, CTRL_BackshiftLock}
 		if version == 2 {
 			mapping[1] = CTRL_Abbreviation
 		}
 		return mapping
 	default:
-		return []CtrlChar{CTRL_Space, CTRL_Abbreviation, CTRL_Abbreviation, CTRL_Abbreviation, CTRL_Shift, CTRL_Backshift}
+		return []ctrlchar{CTRL_Space, CTRL_Abbreviation, CTRL_Abbreviation, CTRL_Abbreviation, CTRL_Shift, CTRL_Backshift}
 	}
 }

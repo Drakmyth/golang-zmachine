@@ -1,6 +1,7 @@
 package zmachine
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/Drakmyth/golang-zmachine/memory"
@@ -34,19 +35,28 @@ func (zmachine *ZMachine) endCurrentFrame(value word) {
 }
 
 func Load(story_path string) (*ZMachine, error) {
-	memory := memory.NewMemory(story_path, func(m *memory.Memory) {
+	m := memory.NewMemory(story_path, func(m *memory.Memory) {
 		// TODO: Initialize IROM
 	})
 
-	stack := append(make([]Frame, 0, 1024), Frame{Counter: memory.GetInitialProgramCounter()})
+	stack := append(make([]Frame, 0, 1024), Frame{Counter: m.GetInitialProgramCounter()})
 
-	version := memory.GetVersion()
-	alphabet := memory.GetAlphabet()
+	version := m.GetVersion()
+
+	alphabetAddress := memory.Address(m.ReadWord(memory.Addr_ROM_A_AlphabetTable))
+
 	ctrlchars := zstring.GetDefaultCtrlCharMapping(version)
-	charset := zstring.NewCharset(alphabet, ctrlchars)
+	var charset zstring.Charset
+	if alphabetAddress == 0 {
+		alphabet := zstring.GetDefaultAlphabet(m.GetVersion())
+		charset = zstring.NewStaticCharset(alphabet, ctrlchars)
+	} else {
+		alphabetHandler := func() []rune { return bytes.Runes(m.GetBytes(memory.Addr_ROM_A_AlphabetTable, 78)) }
+		charset = zstring.NewDynamicCharset(alphabetHandler, ctrlchars)
+	}
 
 	zmachine := ZMachine{
-		Memory:  memory,
+		Memory:  m,
 		Stack:   stack,
 		Charset: charset,
 	}

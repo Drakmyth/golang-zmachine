@@ -60,16 +60,14 @@ func (p parser) Parse(data ZString) string {
 
 		switch zc {
 		case 6:
-			if p.charset.currentCharset == 2 {
-				// TODO: Multi-byte character
-				continue
-			}
+			// if p.charset.currentCharset == 2 {
+			// TODO: Multi-byte character
+			// 	continue
+			// }
 			fallthrough
 		default:
-			builder.WriteRune(p.charset.GetRune(zc))
+			builder.WriteRune(p.charset.PrintRune(zc))
 		}
-
-		p.charset.Reset()
 	}
 
 	return builder.String()

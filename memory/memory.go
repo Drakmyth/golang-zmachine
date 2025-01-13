@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"bytes"
 	"os"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
@@ -120,14 +119,4 @@ func (m *Memory) GetAbbreviation(bank int, index int) zstring.ZString {
 	address := m.ReadWord(abbr_entry)
 	abbreviation := m.GetZString(Address(address * 2))
 	return abbreviation
-}
-
-func (m Memory) GetAlphabet() []rune {
-	alphabetAddress := Address(m.ReadWord(Addr_ROM_A_AlphabetTable))
-
-	if alphabetAddress == 0 {
-		return zstring.GetDefaultAlphabet(m.GetVersion())
-	}
-
-	return bytes.Runes(m.GetBytes(Addr_ROM_A_AlphabetTable, 78))
 }

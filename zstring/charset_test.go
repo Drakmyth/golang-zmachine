@@ -14,34 +14,48 @@ func TestCharacterSetShifting(t *testing.T) {
 
 	type spec struct {
 		expected string
-		control  func(*Charset)
+		control  func(Charset)
 	}
 
 	tests := map[string]spec{
 		"Shift": {
 			expected: "cCc",
-			control: func(charset *Charset) {
+			control: func(charset Charset) {
 				charset.Shift()
 			},
 		},
 		"ShiftLock": {
 			expected: "cCC",
-			control: func(charset *Charset) {
+			control: func(charset Charset) {
 				charset.Shift()
 				charset.Lock()
 			},
 		},
 		"Backshift": {
 			expected: "c0c",
-			control: func(charset *Charset) {
+			control: func(charset Charset) {
 				charset.Backshift()
 			},
 		},
 		"BackshiftLock": {
 			expected: "c00",
-			control: func(charset *Charset) {
+			control: func(charset Charset) {
 				charset.Backshift()
 				charset.Lock()
+			},
+		},
+		"Double Shift": {
+			expected: "cCc",
+			control: func(charset Charset) {
+				charset.Shift()
+				charset.Shift()
+			},
+		},
+		"Double Backshift": {
+			expected: "c0c",
+			control: func(charset Charset) {
+				charset.Backshift()
+				charset.Backshift()
 			},
 		},
 	}
@@ -49,14 +63,11 @@ func TestCharacterSetShifting(t *testing.T) {
 	zc := ZChar(8)
 	for name, s := range tests {
 		t.Run(name, func(t *testing.T) {
-			charset := NewCharset(defaultAlphabet, ctrlchars)
-			actual := utf8.AppendRune(make([]byte, 0, 3), charset.GetRune(zc))
-			charset.Reset()
-			s.control(&charset)
-			actual = utf8.AppendRune(actual, charset.GetRune(zc))
-			charset.Reset()
-			actual = utf8.AppendRune(actual, charset.GetRune(zc))
-			charset.Reset()
+			charset := NewStaticCharset(defaultAlphabet, ctrlchars)
+			actual := utf8.AppendRune(make([]byte, 0, 3), charset.PrintRune(zc))
+			s.control(charset)
+			actual = utf8.AppendRune(actual, charset.PrintRune(zc))
+			actual = utf8.AppendRune(actual, charset.PrintRune(zc))
 
 			testassert.Same(t, s.expected, string(actual))
 		})
@@ -70,24 +81,24 @@ func TestCharacterSet(t *testing.T) {
 
 	type spec struct {
 		chars []rune
-		init  func(*Charset)
+		init  func(Charset)
 	}
 
 	tests := map[string]spec{
 		"a0": {
 			chars: defaultAlphabet[0:26],
-			init:  func(charset *Charset) {},
+			init:  func(charset Charset) {},
 		},
 		"a1": {
 			chars: defaultAlphabet[26:52],
-			init: func(charset *Charset) {
+			init: func(charset Charset) {
 				charset.Shift()
 				charset.Lock()
 			},
 		},
 		"a2": {
 			chars: defaultAlphabet[52:],
-			init: func(charset *Charset) {
+			init: func(charset Charset) {
 				charset.Backshift()
 				charset.Lock()
 			},
@@ -96,14 +107,14 @@ func TestCharacterSet(t *testing.T) {
 
 	for name, s := range tests {
 		t.Run(name, func(t *testing.T) {
-			charset := NewCharset(defaultAlphabet, ctrlchars)
+			charset := NewStaticCharset(defaultAlphabet, ctrlchars)
 
-			s.init(&charset)
+			s.init(charset)
 
 			// Z-Characters range from 0 to 1F
 			// 0-5 are control characters, 6-1F get converted to ZSCII by the alphabet table
 			for zc := ZChar(6); zc <= 0x1F; zc++ {
-				actual := charset.GetRune(zc)
+				actual := charset.PrintRune(zc)
 				expected := s.chars[zc-6]
 				testassert.Same(t, expected, actual)
 			}
@@ -113,12 +124,12 @@ func TestCharacterSet(t *testing.T) {
 
 func TestDefaultControlCharacterMapping(t *testing.T) {
 	type TestCharset struct {
-		ZChar0 CtrlChar
-		ZChar1 CtrlChar
-		ZChar2 CtrlChar
-		ZChar3 CtrlChar
-		ZChar4 CtrlChar
-		ZChar5 CtrlChar
+		ZChar0 ctrlchar
+		ZChar1 ctrlchar
+		ZChar2 ctrlchar
+		ZChar3 ctrlchar
+		ZChar4 ctrlchar
+		ZChar5 ctrlchar
 	}
 
 	type spec struct {

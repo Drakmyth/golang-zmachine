@@ -265,8 +265,7 @@ func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	zstr := zmachine.Memory.GetZString(instruction.NextAddress)
 	next_address := instruction.NextAddress.OffsetBytes(zstr.LenBytes())
 
-	charset := zstring.NewCharset(zmachine.Memory.GetAlphabet(), zstring.GetDefaultCtrlCharMapping(zmachine.Memory.GetVersion()))
-	parser := zstring.NewParser(charset, zmachine.Memory.GetAbbreviation)
+	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
 	str := parser.Parse(zstr)
 
 	fmt.Print(str)
