@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
@@ -231,9 +232,12 @@ func insert_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func je(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
-	b := instruction.Operands[1].asWord()
+	others := make([]word, 0, len(instruction.Operands)-1)
+	for i := 1; i < len(instruction.Operands); i++ {
+		others = append(others, instruction.Operands[i].asWord())
+	}
 
-	return zmachine.performBranch(instruction.Branch, a == b), nil
+	return zmachine.performBranch(instruction.Branch, slices.Contains(others, a)), nil
 }
 
 func jin(zmachine *ZMachine, instruction Instruction) (bool, error) {
