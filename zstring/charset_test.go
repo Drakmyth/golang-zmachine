@@ -63,11 +63,18 @@ func TestCharacterSetShifting(t *testing.T) {
 	zc := ZChar(8)
 	for name, s := range tests {
 		t.Run(name, func(t *testing.T) {
-			charset := NewStaticCharset(defaultAlphabet, ctrlchars)
-			actual := utf8.AppendRune(make([]byte, 0, 3), charset.PrintRune(zc))
+			charset, err := NewStaticCharset(defaultAlphabet, ctrlchars)
+			testassert.NoError(t, err)
+			r, err := charset.PrintRune(zc)
+			testassert.NoError(t, err)
+			actual := utf8.AppendRune(make([]byte, 0, 3), r)
 			s.control(charset)
-			actual = utf8.AppendRune(actual, charset.PrintRune(zc))
-			actual = utf8.AppendRune(actual, charset.PrintRune(zc))
+			r, err = charset.PrintRune(zc)
+			testassert.NoError(t, err)
+			actual = utf8.AppendRune(actual, r)
+			r, err = charset.PrintRune(zc)
+			testassert.NoError(t, err)
+			actual = utf8.AppendRune(actual, r)
 
 			testassert.Same(t, s.expected, string(actual))
 		})
@@ -107,14 +114,16 @@ func TestCharacterSet(t *testing.T) {
 
 	for name, s := range tests {
 		t.Run(name, func(t *testing.T) {
-			charset := NewStaticCharset(defaultAlphabet, ctrlchars)
+			charset, err := NewStaticCharset(defaultAlphabet, ctrlchars)
+			testassert.NoError(t, err)
 
 			s.init(charset)
 
 			// Z-Characters range from 0 to 1F
 			// 0-5 are control characters, 6-1F get converted to ZSCII by the alphabet table
 			for zc := ZChar(6); zc <= 0x1F; zc++ {
-				actual := charset.PrintRune(zc)
+				actual, err := charset.PrintRune(zc)
+				testassert.NoError(t, err)
 				expected := s.chars[zc-6]
 				testassert.Same(t, expected, actual)
 			}

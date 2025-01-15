@@ -1,10 +1,8 @@
 package zstring
 
 import (
-	"fmt"
+	"errors"
 	"slices"
-
-	"github.com/Drakmyth/golang-zmachine/assert"
 )
 
 type ZChar byte
@@ -35,8 +33,8 @@ type Charset interface {
 	Shift()
 	Backshift()
 	Lock()
-	PrintRune(zc ZChar) rune
-	GetControlCharacter(zc ZChar) ctrlchar
+	PrintRune(zc ZChar) (rune, error)
+	GetControlCharacter(zc ZChar) (ctrlchar, error)
 }
 
 type charset struct {
@@ -57,9 +55,13 @@ type dynamicCharset struct {
 	getAlphabet func() []rune
 }
 
-func NewStaticCharset(alphabet []rune, ctrlchars []ctrlchar) Charset {
-	assert.Length(alphabet, 78, "Invalid alphabet table length")
-	assert.Length(ctrlchars, 6, "Invalid count of control characters")
+func NewStaticCharset(alphabet []rune, ctrlchars []ctrlchar) (Charset, error) {
+	if len(alphabet) != 78 {
+		return nil, errors.New("Invalid alphabet table length")
+	}
+	if len(ctrlchars) != 6 {
+		return nil, errors.New("Invalid count of control characters")
+	}
 
 	return staticCharset{
 		charset: &charset{
@@ -68,11 +70,13 @@ func NewStaticCharset(alphabet []rune, ctrlchars []ctrlchar) Charset {
 			ctrlchars:      ctrlchars,
 		},
 		alphabet: alphabet,
-	}
+	}, nil
 }
 
-func NewDynamicCharset(alphabet func() []rune, ctrlchars []ctrlchar) Charset {
-	assert.Length(ctrlchars, 6, "Invalid count of control characters")
+func NewDynamicCharset(alphabet func() []rune, ctrlchars []ctrlchar) (Charset, error) {
+	if len(ctrlchars) != 6 {
+		return nil, errors.New("Invalid count of control characters")
+	}
 
 	return dynamicCharset{
 		charset: &charset{
@@ -81,7 +85,7 @@ func NewDynamicCharset(alphabet func() []rune, ctrlchars []ctrlchar) Charset {
 			ctrlchars:      ctrlchars,
 		},
 		getAlphabet: alphabet,
-	}
+	}, nil
 }
 
 func (c *charset) Shift() {
@@ -96,33 +100,41 @@ func (c *charset) Lock() {
 	c.baseCharset = c.currentCharset
 }
 
-func (c staticCharset) PrintRune(zc ZChar) rune {
+func (c staticCharset) PrintRune(zc ZChar) (rune, error) {
 	return c.printRune(c.alphabet, zc)
 }
 
-func (c dynamicCharset) PrintRune(zc ZChar) rune {
-	return c.printRune(c.getAlphabet(), zc)
+func (c dynamicCharset) PrintRune(zc ZChar) (rune, error) {
+	alphabet := c.getAlphabet()
+	if len(alphabet) != 78 {
+		return '\x00', errors.New("Invalid alphabet table length")
+	}
+	return c.printRune(alphabet, zc)
 }
 
-func (c *charset) printRune(alphabet []rune, zc ZChar) rune {
-	assert.Length(alphabet, 78, "Invalid alphabet table length")
-	assert.GreaterThan(5, zc, "Control ZCharacter not translatable to rune")
+func (c *charset) printRune(alphabet []rune, zc ZChar) (rune, error) {
+	if zc < 6 {
+		return '\x00', errors.New("Control ZCharacter not translatable to rune")
+	}
+
 	r := alphabet[int(zc-6)+(c.currentCharset*26)]
 	c.currentCharset = c.baseCharset
-	return r
+	return r, nil
 }
 
-func (c charset) GetControlCharacter(zc ZChar) ctrlchar {
-	assert.Between(0, 6, zc, "Provided ZCharacter not in control range")
-	return c.ctrlchars[zc]
+func (c charset) GetControlCharacter(zc ZChar) (ctrlchar, error) {
+	if zc > 5 {
+		return CTRL_Space, errors.New("Provided ZCharacter not in control range")
+	}
+
+	return c.ctrlchars[zc], nil
 }
 
 func GetDefaultAlphabet(version int) []rune {
 	alphabet := defaultAlphabet
 	if version == 1 {
 		alphabet = make([]rune, len(defaultAlphabet))
-		copied := copy(alphabet, defaultAlphabet)
-		assert.Same(copied, len(defaultAlphabet), fmt.Sprintf("Failed copying default alphabet: copied %d, expected %d", copied, len(defaultAlphabet)))
+		copy(alphabet, defaultAlphabet)
 		alphabet = slices.Replace(alphabet, 52, len(alphabet), v1ThirdRow...)
 	}
 

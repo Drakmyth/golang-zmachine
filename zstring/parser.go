@@ -69,7 +69,11 @@ func (p parser) Parse(data ZString) (string, error) {
 			// }
 			fallthrough
 		default:
-			builder.WriteRune(p.charset.PrintRune(zc))
+			r, err := p.charset.PrintRune(zc)
+			if err != nil {
+				return "", err
+			}
+			builder.WriteRune(r)
 		}
 	}
 
@@ -77,7 +81,10 @@ func (p parser) Parse(data ZString) (string, error) {
 }
 
 func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) error {
-	ctrl := p.charset.GetControlCharacter(zc)
+	ctrl, err := p.charset.GetControlCharacter(zc)
+	if err != nil {
+		return err
+	}
 
 	switch ctrl {
 	case CTRL_Abbreviation:

@@ -50,12 +50,15 @@ func Load(story_path string) (*ZMachine, error) {
 
 	ctrlchars := zstring.GetDefaultCtrlCharMapping(version)
 	var charset zstring.Charset
+	var err error = nil
 	if alphabetAddress == 0 {
 		alphabet := zstring.GetDefaultAlphabet(m.GetVersion())
-		charset = zstring.NewStaticCharset(alphabet, ctrlchars)
+		charset, err = zstring.NewStaticCharset(alphabet, ctrlchars)
+		assert.NoError(err, "Error instantiating static charset")
 	} else {
 		alphabetHandler := func() []rune { return bytes.Runes(m.GetBytes(memory.Addr_ROM_A_AlphabetTable, 78)) }
-		charset = zstring.NewDynamicCharset(alphabetHandler, ctrlchars)
+		charset, err = zstring.NewDynamicCharset(alphabetHandler, ctrlchars)
+		assert.NoError(err, "Error instantiating dynamic charset")
 	}
 
 	zmachine := ZMachine{
