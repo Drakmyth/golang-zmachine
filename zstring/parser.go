@@ -1,10 +1,9 @@
 package zstring
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/Drakmyth/golang-zmachine/assert"
 )
 
 type word = uint16
@@ -43,8 +42,11 @@ func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) parser {
 	}
 }
 
-func (p parser) Parse(data ZString) string {
-	zchars := parseZCharacters(data)
+func (p parser) Parse(data ZString) (string, error) {
+	zchars, err := parseZCharacters(data)
+	if err != nil {
+		return "", err
+	}
 	builder := strings.Builder{}
 
 	for i := 0; i < len(zchars); i++ {
@@ -71,16 +73,16 @@ func (p parser) Parse(data ZString) string {
 		}
 	}
 
-	return builder.String()
+	return builder.String(), nil
 }
 
-func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) {
+func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) error {
 	ctrl := p.charset.GetControlCharacter(zc)
 
 	switch ctrl {
 	case CTRL_Abbreviation:
 		if !p.UseAbbreviations {
-			return
+			return nil
 		}
 
 		p.pendingAbbreviationBank = int(zc)
@@ -91,7 +93,7 @@ func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) {
 		p.charset.Lock()
 	case CTRL_NewLine:
 		_, err := builder.WriteRune('\n')
-		assert.NoError(err, "Error processing control character")
+		return err
 	case CTRL_Shift:
 		p.charset.Shift()
 	case CTRL_ShiftLock:
@@ -99,14 +101,19 @@ func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) {
 		p.charset.Lock()
 	case CTRL_Space:
 		_, err := builder.WriteRune(' ')
-		assert.NoError(err, "Error processing control character")
+		return err
 	default:
 		panic(fmt.Sprintf("unexpected zstring.CtrlChar: %#v", ctrl))
 	}
+
+	return nil
 }
 
-func parseZCharacters(data ZString) []ZChar {
-	assert.Same(len(data)%2, 0, "ZString must contain even number of bytes")
+func parseZCharacters(data ZString) ([]ZChar, error) {
+	if len(data)%2 != 0 {
+		return []ZChar{}, errors.New("ZString must contain even number of bytes")
+	}
+
 	const MASK_ZChar = 0b11111
 
 	zchars := make([]ZChar, 0, len(data)*3/2)
@@ -125,15 +132,24 @@ func parseZCharacters(data ZString) []ZChar {
 		}
 	}
 
-	assert.True(lastWord, "Malformed ZString encountered, missing end flag")
-	return zchars
+	var err error = nil
+	if !lastWord {
+		err = errors.New("Malformed ZString encountered, missing end flag")
+	}
+
+	return zchars, err
 }
 
-func (p *parser) processAbbreviation(bank int, index int, builder *strings.Builder) {
+func (p *parser) processAbbreviation(bank int, index int, builder *strings.Builder) error {
 	abbreviation := p.getAbbreviation(bank, index)
 	oldValue := p.UseAbbreviations
 	p.UseAbbreviations = false
-	builder.WriteString(p.Parse(abbreviation))
+	str, err := p.Parse(abbreviation)
+	if err != nil {
+		return err
+	}
+	builder.WriteString(str)
 	p.UseAbbreviations = oldValue
 	p.pendingAbbreviationBank = 0
+	return nil
 }

@@ -289,7 +289,8 @@ func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	next_address := instruction.NextAddress.OffsetBytes(zstr.LenBytes())
 
 	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
-	str := parser.Parse(zstr)
+	str, err := parser.Parse(zstr)
+	assert.NoError(err, "Error parsing print ZString")
 
 	fmt.Print(str)
 	if zmachine.Debug {
@@ -347,7 +348,8 @@ func print_paddr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	address := zmachine.Memory.StringPackedAddress(instruction.Operands[0].asWord())
 	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
 	zstr := zmachine.Memory.GetZString(address)
-	str := parser.Parse(zstr)
+	str, err := parser.Parse(zstr)
+	assert.NoError(err, "Error parsing paddr ZString")
 	fmt.Print(str)
 	if zmachine.Debug {
 		fmt.Println()

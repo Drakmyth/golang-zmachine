@@ -112,6 +112,7 @@ func (zmachine *ZMachine) executeNextInstruction() error {
 
 func (zmachine ZMachine) GetObjectShortName(o memory.Object) string {
 	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
-	name := parser.Parse(o.GetShortName())
+	name, err := parser.Parse(o.GetShortName())
+	assert.NoError(err, "Error parsing object short name")
 	return name
 }
