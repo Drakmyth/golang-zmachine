@@ -3,6 +3,7 @@ package zmachine
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/Drakmyth/golang-zmachine/memory"
 	"github.com/Drakmyth/golang-zmachine/zstring"
@@ -11,6 +12,7 @@ import (
 type Opcode word
 
 var opcodes = map[Opcode]InstructionInfo{
+	0x01: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, je},
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
 	0x05: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, inc_chk},
 	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
@@ -31,13 +33,17 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
 	// 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
+	0x8d: {IF_Short, IM_None, []OperandType{OT_Large}, print_paddr},
+	0x95: {IF_Short, IM_None, []OperandType{OT_Small}, inc},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
 	// 0xa3: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_parent},
 	0xaa: {IF_Short, IM_None, []OperandType{OT_Variable}, print_obj},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
+	0xba: {IF_Short, IM_None, []OperandType{}, quit},
 	0xbb: {IF_Short, IM_None, []OperandType{}, new_line},
+	0xc1: {IF_Variable, IM_Branch, []OperandType{}, je},
 	0xc9: {IF_Variable, IM_Store, []OperandType{}, and},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
@@ -177,6 +183,19 @@ func get_parent(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	parent := object.GetParent()
 
 	instruction.StoreVariable.Write(word(parent))
+	return false, nil
+}
+
+func inc(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
+
+	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
+	// Is this actually a problem? It will pop it off, but then push it right back on.
+	// The address will change potentially, but does that matter?
+	value := variable.Read()
+	value++
+	variable.Write(value)
+
 	return false, nil
 }
 
@@ -320,6 +339,19 @@ func print_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return false, nil
 }
 
+func print_paddr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	address := zmachine.Memory.StringPackedAddress(instruction.Operands[0].asWord())
+	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
+	zstr := zmachine.Memory.GetZString(address)
+	str := parser.Parse(zstr)
+	fmt.Print(str)
+	if zmachine.Debug {
+		fmt.Println()
+	}
+
+	return false, nil
+}
+
 func pull(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
@@ -344,6 +376,12 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	object := zmachine.Memory.GetObject(object_index)
 	object.SetProperty(property_index, value)
+
+	return false, nil
+}
+
+func quit(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	os.Exit(0)
 
 	return false, nil
 }
