@@ -104,10 +104,10 @@ func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
 }
 
 func add(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	a := instruction.Operands[0].asWord()
-	b := instruction.Operands[1].asWord()
+	a := int16(instruction.Operands[0].asWord())
+	b := int16(instruction.Operands[1].asWord())
 
-	instruction.StoreVariable.Write(a + b)
+	instruction.StoreVariable.Write(uint16(a + b))
 	return false, nil
 }
 
@@ -161,23 +161,23 @@ func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	// Is this actually a problem? It will pop it off, but then push it right back on.
 	// The address will change potentially, but does that matter?
-	value := variable.Read()
+	value := int16(variable.Read())
 	value--
-	variable.Write(value)
+	variable.Write(uint16(value))
 
 	return false, nil
 }
 
 func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
-	condition := instruction.Operands[1].asWord()
+	condition := int16(instruction.Operands[1].asWord())
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	// Is this actually a problem? It will pop it off, but then push it right back on.
 	// The address will change potentially, but does that matter?
-	value := variable.Read()
+	value := int16(variable.Read())
 	value--
-	variable.Write(value)
+	variable.Write(uint16(value))
 
 	return zmachine.performBranch(instruction.Branch, value < condition), nil
 }
@@ -196,23 +196,23 @@ func inc(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	// Is this actually a problem? It will pop it off, but then push it right back on.
 	// The address will change potentially, but does that matter?
-	value := variable.Read()
+	value := int16(variable.Read())
 	value++
-	variable.Write(value)
+	variable.Write(uint16(value))
 
 	return false, nil
 }
 
 func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
-	condition := instruction.Operands[1].asWord()
+	condition := int16(instruction.Operands[1].asWord())
 
 	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
 	// Is this actually a problem? It will pop it off, but then push it right back on.
 	// The address will change potentially, but does that matter?
-	value := variable.Read()
+	value := int16(variable.Read())
 	value++
-	variable.Write(value)
+	variable.Write(uint16(value))
 
 	return zmachine.performBranch(instruction.Branch, value > condition), nil
 }
@@ -451,9 +451,9 @@ func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 // }
 
 func sub(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	a := instruction.Operands[0].asWord()
-	b := instruction.Operands[1].asWord()
-	instruction.StoreVariable.Write(a - b)
+	a := int16(instruction.Operands[0].asWord())
+	b := int16(instruction.Operands[1].asWord())
+	instruction.StoreVariable.Write(uint16(a - b))
 	return false, nil
 }
 
