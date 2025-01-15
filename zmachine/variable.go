@@ -3,6 +3,7 @@ package zmachine
 import (
 	"fmt"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
 )
 
@@ -67,9 +68,15 @@ func (variable Variable) Read() word {
 	zmachine := variable.zmachine
 
 	if variable.isStack() {
-		return zmachine.Stack.Peek().Stack.Pop()
+		frame, err := zmachine.Stack.Peek()
+		assert.NoError(err, "Error peeking frame stack")
+		value, err := frame.Stack.Pop()
+		assert.NoError(err, "Error popping local stack")
+		return value
 	} else if variable.isLocal() {
-		return zmachine.Stack.Peek().Locals[variable.Number.asLocal()]
+		frame, err := zmachine.Stack.Peek()
+		assert.NoError(err, "Error peeking frame stack")
+		return frame.Locals[variable.Number.asLocal()]
 	} else {
 		global := zmachine.Memory.ReadWord(zmachine.Memory.GetGlobalsAddress().OffsetWords(variable.Number.asGlobal()))
 		return global
@@ -80,9 +87,13 @@ func (variable *Variable) Write(value word) {
 	zmachine := variable.zmachine
 
 	if variable.isStack() {
-		zmachine.Stack.Peek().Stack.Push(value)
+		frame, err := zmachine.Stack.Peek()
+		assert.NoError(err, "Error peeking frame stack")
+		frame.Stack.Push(value)
 	} else if variable.isLocal() {
-		zmachine.Stack.Peek().Locals[variable.Number.asLocal()] = value
+		frame, err := zmachine.Stack.Peek()
+		assert.NoError(err, "Error peeking frame stack")
+		frame.Locals[variable.Number.asLocal()] = value
 	} else {
 		zmachine.Memory.WriteWord(zmachine.Memory.GetGlobalsAddress().OffsetWords(variable.Number.asGlobal()), value)
 	}

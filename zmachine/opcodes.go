@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
 	"github.com/Drakmyth/golang-zmachine/zstring"
 )
@@ -87,7 +88,9 @@ func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
 		branch.Condition == BC_OnFalse && !condition {
 		switch branch.Behavior {
 		case BB_Normal:
-			zmachine.Stack.Peek().Counter = branch.Address
+			frame, err := zmachine.Stack.Peek()
+			assert.NoError(err, "Error peeking frame stack")
+			frame.Counter = branch.Address
 			return true
 		case BB_ReturnFalse:
 			zmachine.endCurrentFrame(0)
@@ -243,7 +246,8 @@ func jin(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	offset := instruction.Operands[0].asInt()
 
-	frame := zmachine.Stack.Peek()
+	frame, err := zmachine.Stack.Peek()
+	assert.NoError(err, "Error peeking frame stack")
 	frame.Counter = instruction.NextAddress.OffsetBytes(offset - 2)
 	return true, nil
 }
@@ -355,7 +359,10 @@ func print_paddr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func pull(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
-	value := zmachine.Stack.Peek().Stack.Pop()
+	frame, err := zmachine.Stack.Peek()
+	assert.NoError(err, "Error peeking frame stack")
+	value, err := frame.Stack.Pop()
+	assert.NoError(err, "Error popping local stack")
 	variable.Write(value)
 
 	return false, nil
@@ -364,7 +371,9 @@ func pull(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func push(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := instruction.Operands[0].asWord()
 
-	zmachine.Stack.Peek().Stack.Push(value)
+	frame, err := zmachine.Stack.Peek()
+	assert.NoError(err, "Error peeking frame stack")
+	frame.Stack.Push(value)
 
 	return false, nil
 }

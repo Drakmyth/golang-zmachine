@@ -26,6 +26,23 @@ func Panics(t *testing.T, f func()) {
 	assertPanic(t, true)
 }
 
+func NoError(t *testing.T, actual error) {
+	t.Helper()
+	if actual != nil {
+		t.Errorf("Unexpected error: %v", actual)
+	}
+}
+
+func ErrorMessage(t *testing.T, expected string, actual error) {
+	t.Helper()
+	if actual == nil {
+		t.Error("Expected error, but nothing")
+	} else if actual.Error() != expected {
+		t.Errorf("Expected: %v, Received: %v", expected, actual)
+	}
+
+}
+
 type PanicAssertion func(t *testing.T, f func())
 
 func NoPanic(t *testing.T, f func()) {

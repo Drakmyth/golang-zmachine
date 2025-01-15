@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
 	"github.com/Drakmyth/golang-zmachine/stack"
 	"github.com/Drakmyth/golang-zmachine/zmachine/internal/screen"
@@ -28,7 +29,9 @@ type Frame struct {
 }
 
 func (zmachine *ZMachine) endCurrentFrame(value word) {
-	frame := zmachine.Stack.Pop()
+	frame, err := zmachine.Stack.Pop()
+	assert.NoError(err, "Error popping frame stack")
+
 	if !frame.DiscardReturn {
 		frame.ReturnVariable.Write(value)
 	}
@@ -75,7 +78,8 @@ func (zmachine ZMachine) Run() error {
 }
 
 func (zmachine *ZMachine) executeNextInstruction() error {
-	frame := zmachine.Stack.Peek()
+	frame, err := zmachine.Stack.Peek()
+	assert.NoError(err, "Error peeking instruction stack")
 
 	instruction, next_address, err := zmachine.readInstruction(frame.Counter)
 	if err != nil {
