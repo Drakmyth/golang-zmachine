@@ -15,6 +15,7 @@ type Opcode word
 
 var opcodes = map[Opcode]InstructionInfo{
 	0x01: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, je},
+	0x02: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, jl},
 	0x03: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, jg},
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
 	0x05: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, inc_chk},
@@ -22,10 +23,12 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x0f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadw},
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
 	0x21: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, je},
+	0x22: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, jl},
 	0x23: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, jg},
 	0x2d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, store},
 	0x30: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadb},
 	0x41: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, je},
+	0x42: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, jl},
 	0x43: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, jg},
 	0x46: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, jin},
 	0x49: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, and},
@@ -35,6 +38,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
 	0x61: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, je},
+	0x62: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, jl},
 	0x63: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, jg},
 	0x6e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, insert_obj},
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
@@ -52,6 +56,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xba: {IF_Short, IM_None, []OperandType{}, quit},
 	0xbb: {IF_Short, IM_None, []OperandType{}, new_line},
 	0xc1: {IF_Variable, IM_Branch, []OperandType{}, je},
+	0xc2: {IF_Variable, IM_Branch, []OperandType{}, jl},
 	0xc3: {IF_Variable, IM_Branch, []OperandType{}, jg},
 	0xc9: {IF_Variable, IM_Store, []OperandType{}, and},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
@@ -259,6 +264,13 @@ func jin(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	b := instruction.Operands[1].asObjectId()
 
 	return zmachine.performBranch(instruction.Branch, a.GetParent() == b), nil
+}
+
+func jl(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	a := int16(instruction.Operands[0].asWord())
+	b := int16(instruction.Operands[1].asWord())
+
+	return zmachine.performBranch(instruction.Branch, a < b), nil
 }
 
 func jump(zmachine *ZMachine, instruction Instruction) (bool, error) {
