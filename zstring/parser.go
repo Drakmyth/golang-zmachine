@@ -92,6 +92,7 @@ func (p parser) Parse(data ZString) (string, error) {
 		}
 	}
 
+	p.charset.Reset()
 	return builder.String(), nil
 }
 
