@@ -33,8 +33,10 @@ type Charset interface {
 	Shift()
 	Backshift()
 	Lock()
+	Reset()
 	PrintRune(zc ZChar) (rune, error)
 	GetControlCharacter(zc ZChar) (ctrlchar, error)
+	IsA2() bool
 }
 
 type charset struct {
@@ -100,6 +102,14 @@ func (c *charset) Lock() {
 	c.baseCharset = c.currentCharset
 }
 
+func (c *charset) Reset() {
+	c.currentCharset = c.baseCharset
+}
+
+func (c charset) IsA2() bool {
+	return c.currentCharset == 2
+}
+
 func (c staticCharset) PrintRune(zc ZChar) (rune, error) {
 	return c.printRune(c.alphabet, zc)
 }
@@ -118,7 +128,7 @@ func (c *charset) printRune(alphabet []rune, zc ZChar) (rune, error) {
 	}
 
 	r := alphabet[int(zc-6)+(c.currentCharset*26)]
-	c.currentCharset = c.baseCharset
+	c.Reset()
 	return r, nil
 }
 

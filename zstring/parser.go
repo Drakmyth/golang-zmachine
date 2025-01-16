@@ -29,6 +29,8 @@ type GetAbbreviationHandler func(bank int, index int) ZString
 type parser struct {
 	charset                 Charset
 	pendingAbbreviationBank int
+	multibyteState          int
+	multibyteValue          uint16
 	UseAbbreviations        bool
 	getAbbreviation         GetAbbreviationHandler
 }
@@ -37,6 +39,8 @@ func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) parser {
 	return parser{
 		charset:                 charset,
 		pendingAbbreviationBank: 0,
+		multibyteState:          0,
+		multibyteValue:          0x00,
 		UseAbbreviations:        true,
 		getAbbreviation:         abbrevHandler,
 	}
@@ -51,6 +55,11 @@ func (p parser) Parse(data ZString) (string, error) {
 
 	for i := 0; i < len(zchars); i++ {
 		zc := zchars[i]
+		if p.multibyteState > 0 {
+			p.processMultibyte(zc, &builder)
+			continue
+		}
+
 		if p.UseAbbreviations && p.pendingAbbreviationBank > 0 {
 			p.processAbbreviation(p.pendingAbbreviationBank, int(zc), &builder)
 			continue
@@ -61,11 +70,17 @@ func (p parser) Parse(data ZString) (string, error) {
 			continue
 		}
 
+		if zc == 6 && p.charset.IsA2() {
+			p.processMultibyte(zc, &builder)
+			p.charset.Reset()
+			continue
+		}
+
 		switch zc {
-		case 6:
+		case 7:
 			// if p.charset.currentCharset == 2 {
-			// TODO: Multi-byte character
-			// 	continue
+			// TODO: Override table value with newline
+			//  continue
 			// }
 			fallthrough
 		default:
@@ -78,6 +93,20 @@ func (p parser) Parse(data ZString) (string, error) {
 	}
 
 	return builder.String(), nil
+}
+
+func (p *parser) processMultibyte(zc ZChar, builder *strings.Builder) {
+	switch p.multibyteState {
+	case 0:
+		p.multibyteState++
+	case 1:
+		p.multibyteValue = uint16(zc) << 5
+		p.multibyteState++
+	case 2:
+		p.multibyteValue = p.multibyteValue | uint16(zc)
+		builder.WriteRune(rune(p.multibyteValue))
+		p.multibyteState = 0
+	}
 }
 
 func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) error {
@@ -93,22 +122,23 @@ func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) err
 		}
 
 		p.pendingAbbreviationBank = int(zc)
+		p.charset.Reset()
 	case CTRL_Backshift:
 		p.charset.Backshift()
 	case CTRL_BackshiftLock:
 		p.charset.Backshift()
 		p.charset.Lock()
 	case CTRL_NewLine:
-		_, err := builder.WriteRune('\n')
-		return err
+		builder.WriteRune('\n')
+		p.charset.Reset()
 	case CTRL_Shift:
 		p.charset.Shift()
 	case CTRL_ShiftLock:
 		p.charset.Shift()
 		p.charset.Lock()
 	case CTRL_Space:
-		_, err := builder.WriteRune(' ')
-		return err
+		builder.WriteRune(' ')
+		p.charset.Reset()
 	default:
 		panic(fmt.Sprintf("unexpected zstring.CtrlChar: %#v", ctrl))
 	}
