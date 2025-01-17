@@ -91,6 +91,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x77: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, div},
 	0x78: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, mod},
 	0x80: {IF_Short, IM_Branch, []OperandType{OT_Large}, jz},
+	0x81: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Large}, get_sibling},
 	0x83: {IF_Short, IM_Store, []OperandType{OT_Large}, get_parent},
 	0x85: {IF_Short, IM_None, []OperandType{OT_Large}, inc},
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
@@ -102,6 +103,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x8e: {IF_Short, IM_Store, []OperandType{OT_Large}, load},
 	0x8f: {IF_Short, IM_Store, []OperandType{OT_Large}, not},
 	0x90: {IF_Short, IM_Branch, []OperandType{OT_Small}, jz},
+	0x91: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Small}, get_sibling},
 	0x93: {IF_Short, IM_Store, []OperandType{OT_Small}, get_parent},
 	0x95: {IF_Short, IM_None, []OperandType{OT_Small}, inc},
 	0x96: {IF_Short, IM_None, []OperandType{OT_Small}, dec},
@@ -112,6 +114,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x9e: {IF_Short, IM_Store, []OperandType{OT_Small}, load},
 	0x9f: {IF_Short, IM_Store, []OperandType{OT_Small}, not}, // This opcode changed to `call_1n` in V5
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
+	0xa1: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Variable}, get_sibling},
 	0xa3: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_parent},
 	0xa5: {IF_Short, IM_None, []OperandType{OT_Variable}, inc},
 	0xa6: {IF_Short, IM_None, []OperandType{OT_Variable}, dec},
@@ -298,6 +301,14 @@ func get_parent(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	instruction.StoreVariable.Write(word(parent))
 	return false, nil
+}
+
+func get_sibling(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	object := zmachine.Memory.GetObject(instruction.Operands[0].asObjectId())
+	sibling := object.GetSibling()
+
+	instruction.StoreVariable.Write(word(sibling))
+	return zmachine.performBranch(instruction.Branch, sibling != 0), nil
 }
 
 func inc(zmachine *ZMachine, instruction Instruction) (bool, error) {
