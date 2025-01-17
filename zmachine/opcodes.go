@@ -29,6 +29,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
 	0x14: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, add},
 	0x15: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, sub},
+	0x16: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, mul},
 	0x21: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, je},
 	0x22: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, jl},
 	0x23: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, jg},
@@ -44,6 +45,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x30: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadb},
 	0x34: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, add},
 	0x35: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, sub},
+	0x36: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, mul},
 	0x41: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, je},
 	0x42: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, jl},
 	0x43: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, jg},
@@ -59,6 +61,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x50: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadb},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
+	0x56: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, mul},
 	0x61: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, je},
 	0x62: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, jl},
 	0x63: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, jg},
@@ -74,6 +77,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x70: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, loadb},
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
 	0x75: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, sub},
+	0x76: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, mul},
 	0x80: {IF_Short, IM_Branch, []OperandType{OT_Large}, jz},
 	0x85: {IF_Short, IM_None, []OperandType{OT_Large}, inc},
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
@@ -120,6 +124,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xd0: {IF_Variable, IM_Store, []OperandType{}, loadb},
 	0xd4: {IF_Variable, IM_Store, []OperandType{}, add},
 	0xd5: {IF_Variable, IM_Store, []OperandType{}, sub},
+	0xd6: {IF_Variable, IM_Store, []OperandType{}, mul},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
@@ -376,6 +381,14 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := zmachine.Memory.ReadWord(address)
 
 	instruction.StoreVariable.Write(value)
+	return false, nil
+}
+
+func mul(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	a := int16(instruction.Operands[0].asWord())
+	b := int16(instruction.Operands[1].asWord())
+	instruction.StoreVariable.Write(uint16(a * b))
+
 	return false, nil
 }
 
