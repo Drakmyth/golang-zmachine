@@ -59,6 +59,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xad: {IF_Short, IM_None, []OperandType{OT_Variable}, print_paddr},
 	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
+	0xb9: {IF_Short, IM_None, []OperandType{}, pop}, // This opcode changed to `catch` in V5
 	0xba: {IF_Short, IM_None, []OperandType{}, quit},
 	0xbb: {IF_Short, IM_None, []OperandType{}, new_line},
 	0xc1: {IF_Variable, IM_Branch, []OperandType{}, je},
@@ -317,6 +318,15 @@ func loadw(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func new_line(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	fmt.Println()
+	return false, nil
+}
+
+func pop(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	frame, err := zmachine.Stack.Peek()
+	assert.NoError(err, "Error popping frame stack")
+	_, err = frame.Stack.Pop()
+	assert.NoError(err, "Error popping local stack")
+
 	return false, nil
 }
 
