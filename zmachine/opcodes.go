@@ -82,6 +82,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x8b: {IF_Short, IM_None, []OperandType{OT_Large}, ret},
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
 	0x8d: {IF_Short, IM_None, []OperandType{OT_Large}, print_paddr},
+	0x8e: {IF_Short, IM_Store, []OperandType{OT_Large}, load},
 	0x90: {IF_Short, IM_Branch, []OperandType{OT_Small}, jz},
 	0x95: {IF_Short, IM_None, []OperandType{OT_Small}, inc},
 	0x96: {IF_Short, IM_None, []OperandType{OT_Small}, dec},
@@ -89,6 +90,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x9b: {IF_Short, IM_None, []OperandType{OT_Small}, ret},
 	0x9c: {IF_Short, IM_None, []OperandType{OT_Small}, jump},
 	0x9d: {IF_Short, IM_None, []OperandType{OT_Small}, print_paddr},
+	0x9e: {IF_Short, IM_Store, []OperandType{OT_Small}, load},
 	0xa0: {IF_Short, IM_Branch, []OperandType{OT_Variable}, jz},
 	// 0xa3: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_parent},
 	0xa5: {IF_Short, IM_None, []OperandType{OT_Variable}, inc},
@@ -97,6 +99,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xac: {IF_Short, IM_None, []OperandType{OT_Variable}, jump},
 	0xad: {IF_Short, IM_None, []OperandType{OT_Variable}, print_paddr},
+	0xae: {IF_Short, IM_Store, []OperandType{OT_Variable}, load},
 	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
 	0xb9: {IF_Short, IM_None, []OperandType{}, pop}, // This opcode changed to `catch` in V5
@@ -344,6 +347,15 @@ func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asWord()
 
 	return zmachine.performBranch(instruction.Branch, a == 0), nil
+}
+
+func load(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
+
+	value := variable.Read()
+	instruction.StoreVariable.Write(value)
+
+	return false, nil
 }
 
 func loadb(zmachine *ZMachine, instruction Instruction) (bool, error) {
