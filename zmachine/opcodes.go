@@ -145,7 +145,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xd8: {IF_Variable, IM_Store, []OperandType{}, mod},
 	0xe0: {IF_Variable, IM_Store, []OperandType{}, call},
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
-	// 0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
+	0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
 	0xe3: {IF_Variable, IM_None, []OperandType{}, put_prop},
 	0xe5: {IF_Variable, IM_None, []OperandType{}, print_char},
 	0xe6: {IF_Variable, IM_None, []OperandType{}, print_num},
@@ -611,15 +611,15 @@ func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return false, nil
 }
 
-// func storeb(zmachine *ZMachine, instruction Instruction) (bool, error) {
-// array := instruction.Operands[0].asAddress()
-// byte_index := instruction.Operands[1].asInt()
-// value := instruction.Operands[2].asByte()
+func storeb(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	array := instruction.Operands[0].asAddress()
+	byte_index := instruction.Operands[1].asInt()
+	value := instruction.Operands[2].asByte()
 
-// 	address := array.OffsetBytes(byte_index)
-// 	zmachine.writeByte(value, address)
-// 	return false, nil
-// }
+	address := array.OffsetBytes(byte_index)
+	zmachine.Memory.WriteByte(address, value)
+	return false, nil
+}
 
 func sub(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := int16(instruction.Operands[0].asWord())
