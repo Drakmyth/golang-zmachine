@@ -673,5 +673,7 @@ func test_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object_index := instruction.Operands[0].asObjectId()
 	attribute_index := instruction.Operands[1].asInt()
 
-	return zmachine.performBranch(instruction.Branch, zmachine.Memory.GetObject(object_index).HasAttribute(attribute_index)), nil
+	object := zmachine.Memory.GetObject(object_index)
+
+	return zmachine.performBranch(instruction.Branch, object.HasAttribute(attribute_index)), nil
 }

@@ -58,7 +58,8 @@ func (o Object) HasAttribute(index int) bool {
 	newIndex := index % 8
 
 	attributeByte := o.data[idx_Attributes+bytesToSkip]
-	return (attributeByte>>newIndex)&0b1 == 1
+	hasAttribute := (attributeByte >> (7 - newIndex)) & 0b1
+	return hasAttribute == 1
 }
 
 func (o Object) SetAttribute(index int) {
