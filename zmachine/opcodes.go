@@ -24,6 +24,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x09: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, and},
 	0x0a: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, test_attr},
 	0x0b: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, set_attr},
+	0x0c: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, clear_attr},
 	0x0d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, store},
 	0x0e: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, insert_obj},
 	0x0f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadw},
@@ -43,6 +44,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x29: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, and},
 	0x2a: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, test_attr},
 	0x2b: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, set_attr},
+	0x2c: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, clear_attr},
 	0x2d: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, store},
 	0x2e: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, insert_obj},
 	0x2f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadw},
@@ -62,6 +64,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x49: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, and},
 	0x4a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test_attr},
 	0x4b: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, set_attr},
+	0x4c: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, clear_attr},
 	0x4d: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, store},
 	0x4e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, insert_obj},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
@@ -81,6 +84,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x69: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, and},
 	0x6a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, test_attr},
 	0x6b: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, set_attr},
+	0x6c: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, clear_attr},
 	0x6d: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, store},
 	0x6e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, insert_obj},
 	0x6f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, loadw},
@@ -144,6 +148,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xc9: {IF_Variable, IM_Store, []OperandType{}, and},
 	0xca: {IF_Variable, IM_Branch, []OperandType{}, test_attr},
 	0xcb: {IF_Variable, IM_None, []OperandType{}, set_attr},
+	0xcc: {IF_Variable, IM_None, []OperandType{}, clear_attr},
 	0xcd: {IF_Variable, IM_None, []OperandType{}, store},
 	0xce: {IF_Variable, IM_None, []OperandType{}, insert_obj},
 	0xcf: {IF_Variable, IM_Store, []OperandType{}, loadw},
@@ -259,6 +264,15 @@ func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	zmachine.Stack.Push(frame)
 	return false, nil // Return false because the previous frame hasn't been updated yet even though there is a new frame
+}
+
+func clear_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	object := instruction.Operands[0].asObjectId()
+	attribute := instruction.Operands[1].asInt()
+
+	zmachine.Memory.GetObject(object).ClearAttribute(attribute)
+
+	return false, nil
 }
 
 func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {

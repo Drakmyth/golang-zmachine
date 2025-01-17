@@ -62,6 +62,22 @@ func (o Object) HasAttribute(index int) bool {
 	return hasAttribute == 1
 }
 
+func (o Object) ClearAttribute(index int) {
+	maxAttributes := 32
+	if o.version > 3 {
+		maxAttributes = 48
+	}
+	assert.LessThan(maxAttributes, index, "Invalid attribute index")
+
+	bytesToSkip := index / 8
+	newIndex := index % 8
+
+	attributeByte := o.data[idx_Attributes+bytesToSkip]
+	mask := ^byte(0b1 << (7 - newIndex))
+	attributeByte = attributeByte & mask
+	o.data[idx_Attributes+bytesToSkip] = attributeByte
+}
+
 func (o Object) SetAttribute(index int) {
 	maxAttributes := 32
 	if o.version > 3 {
