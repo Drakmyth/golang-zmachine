@@ -102,7 +102,7 @@ func (zmachine ZMachine) readOpcode(address memory.Address) (Opcode, memory.Addr
 // 	panic("Unknown version")
 // }
 
-func (zmachine ZMachine) performBranch(branch Branch, condition bool) bool {
+func (zmachine *ZMachine) performBranch(branch Branch, condition bool) bool {
 	if branch.Condition == BC_OnTrue && condition ||
 		branch.Condition == BC_OnFalse && !condition {
 		switch branch.Behavior {
