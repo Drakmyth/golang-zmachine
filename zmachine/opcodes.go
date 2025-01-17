@@ -120,6 +120,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xae: {IF_Short, IM_Store, []OperandType{OT_Variable}, load},
 	0xaf: {IF_Short, IM_Store, []OperandType{OT_Variable}, not}, // This opcode changed to `call_1n` in V5
 	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
+	0xb1: {IF_Short, IM_None, []OperandType{}, rfalse},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
 	0xb9: {IF_Short, IM_None, []OperandType{}, pop}, // This opcode changed to `catch` in V5
 	0xba: {IF_Short, IM_None, []OperandType{}, quit},
@@ -576,6 +577,11 @@ func ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	value := instruction.Operands[0].asWord()
 
 	zmachine.endCurrentFrame(value)
+	return true, nil
+}
+
+func rfalse(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	zmachine.endCurrentFrame(0)
 	return true, nil
 }
 
