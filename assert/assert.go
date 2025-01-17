@@ -41,6 +41,12 @@ func NotEmpty[S ~[]E, E any](s S, message string) {
 	}
 }
 
+func NotSame[E comparable](v1 E, v2 E, message string) {
+	if v1 == v2 {
+		panic(message)
+	}
+}
+
 func Same[E comparable](v1 E, v2 E, message string) {
 	if v1 != v2 {
 		panic(message)
