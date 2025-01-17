@@ -476,7 +476,7 @@ func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
-	value := instruction.Operands[0].asWord()
+	value := instruction.Operands[1].asWord()
 
 	variable.Write(value)
 	return false, nil
