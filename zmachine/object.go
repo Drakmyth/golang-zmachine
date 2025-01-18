@@ -1,9 +1,10 @@
-package memory
+package zmachine
 
 import (
 	"fmt"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
+	"github.com/Drakmyth/golang-zmachine/memory"
 	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
@@ -219,7 +220,7 @@ func getMaxObjectCount(version int) int {
 	return 65535
 }
 
-func (m Memory) GetObject(objectId ObjectId) Object {
+func GetObject(m *memory.Memory, objectId ObjectId) Object {
 	objectNumber := objectId - 1 // Object 0 is not stored in memory, so we shift the index back one
 
 	objectTableAddress := m.GetObjectsAddress()
@@ -234,12 +235,12 @@ func (m Memory) GetObject(objectId ObjectId) Object {
 	if version > 3 {
 		propertyTableAddressOffset = idxV4_PropertiesAddr
 	}
-	propertyTableAddress := Address(m.ReadWord(objectAddress.OffsetBytes(propertyTableAddressOffset)))
-	shortName, propertiesData := m.getPropertyTableData(propertyTableAddress)
+	propertyTableAddress := memory.Address(m.ReadWord(objectAddress.OffsetBytes(propertyTableAddressOffset)))
+	shortName, propertiesData := getPropertyTableData(m, propertyTableAddress)
 
 	object := Object{
 		id:             objectId,
-		data:           m.memory[objectAddress:objectAddress.OffsetBytes(objectSize)],
+		data:           m.GetBytes(objectAddress, objectSize),
 		version:        version,
 		shortName:      shortName,
 		propertiesData: propertiesData,
@@ -248,12 +249,11 @@ func (m Memory) GetObject(objectId ObjectId) Object {
 	return object
 }
 
-func (m *Memory) getPropertyTableData(propertyTableAddress Address) (zstring.ZString, []byte) {
+func getPropertyTableData(m *memory.Memory, propertyTableAddress memory.Address) (zstring.ZString, []byte) {
 	headerLength, next_address := m.ReadByteNext(propertyTableAddress)
 	headerLengthByteCount := int(headerLength) * 2
-	addrAfterShortName := next_address.OffsetBytes(headerLengthByteCount)
-	shortName := zstring.ZString(m.memory[next_address:addrAfterShortName])
-	next_address = addrAfterShortName
+	shortName := zstring.ZString(m.GetBytes(next_address, headerLengthByteCount))
+	next_address = next_address.OffsetBytes(headerLengthByteCount)
 	property_size, next_address := m.ReadByteNext(next_address)
 
 	for property_size != 0 {

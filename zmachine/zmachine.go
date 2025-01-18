@@ -113,7 +113,7 @@ func (zmachine *ZMachine) executeNextInstruction() error {
 	return err
 }
 
-func (zmachine ZMachine) GetObjectShortName(o memory.Object) string {
+func (zmachine ZMachine) GetObjectShortName(o Object) string {
 	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
 	name, err := parser.Parse(o.GetShortName())
 	assert.NoError(err, "Error parsing object short name")
