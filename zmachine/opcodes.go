@@ -29,6 +29,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x0e: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, insert_obj},
 	0x0f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadw},
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
+	0x13: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, get_next_prop},
 	0x14: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, add},
 	0x15: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, sub},
 	0x16: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, mul},
@@ -49,6 +50,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x2e: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, insert_obj},
 	0x2f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadw},
 	0x30: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadb},
+	0x33: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, get_next_prop},
 	0x34: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, add},
 	0x35: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, sub},
 	0x36: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, mul},
@@ -69,6 +71,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x4e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, insert_obj},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x50: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadb},
+	0x53: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, get_next_prop},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
 	0x56: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, mul},
@@ -89,6 +92,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x6e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, insert_obj},
 	0x6f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, loadw},
 	0x70: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, loadb},
+	0x73: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, get_next_prop},
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
 	0x75: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, sub},
 	0x76: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, mul},
@@ -153,6 +157,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xce: {IF_Variable, IM_None, []OperandType{}, insert_obj},
 	0xcf: {IF_Variable, IM_Store, []OperandType{}, loadw},
 	0xd0: {IF_Variable, IM_Store, []OperandType{}, loadb},
+	0xd3: {IF_Variable, IM_Store, []OperandType{}, get_next_prop},
 	0xd4: {IF_Variable, IM_Store, []OperandType{}, add},
 	0xd5: {IF_Variable, IM_Store, []OperandType{}, sub},
 	0xd6: {IF_Variable, IM_Store, []OperandType{}, mul},
@@ -179,21 +184,6 @@ func (zmachine ZMachine) readOpcode(address memory.Address) (Opcode, memory.Addr
 
 	return Opcode(opcode), next_address
 }
-
-// func (zmachine ZMachine) getRoutineAddress(address memory.Address) memory.Address {
-// 	switch zmachine.Memory.GetVersion() {
-// 	case 1, 2, 3:
-// 		return address * 2
-// 	case 4, 5:
-// 		return address * 4
-// 	case 6, 7:
-// 		return address*4 + zmachine.Header.RoutinesAddr*8
-// 	case 8:
-// 		return address * 8
-// 	}
-
-// 	panic("Unknown version")
-// }
 
 func (zmachine *ZMachine) performBranch(branch Branch, condition bool) bool {
 	if branch.Condition == BC_OnTrue && condition ||
@@ -318,6 +308,17 @@ func get_child(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	instruction.StoreVariable.Write(word(child))
 	return zmachine.performBranch(instruction.Branch, child != 0), nil
+}
+
+func get_next_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	objectId := instruction.Operands[0].asObjectId()
+	propertyId := instruction.Operands[1].asPropertyId()
+
+	object := GetObject(zmachine.Memory, objectId)
+	nextPropId := object.GetNextPropertyId(propertyId)
+
+	instruction.StoreVariable.Write(word(nextPropId))
+	return false, nil
 }
 
 func get_parent(zmachine *ZMachine, instruction Instruction) (bool, error) {

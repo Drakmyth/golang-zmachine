@@ -168,7 +168,8 @@ func (o *object) ShortName() zstring.ZString {
 		propertyTableOffset = idxV4_PropertiesAddr
 	}
 
-	propertyTableAddr := o.address.OffsetBytes(propertyTableOffset)
+	propertyTablePointer := o.address.OffsetBytes(propertyTableOffset)
+	propertyTableAddr := memory.Address(o.mem.ReadWord(propertyTablePointer))
 	return o.mem.GetZString(propertyTableAddr.OffsetBytes(1))
 }
 
@@ -192,6 +193,37 @@ func (o *object) SetProperty(pid PropertyId, data []byte) {
 	}
 }
 
+func (o object) GetNextPropertyId(pid PropertyId) PropertyId {
+	propertyTableOffset := idxV1_PropertiesAddr
+	maxPropertyId := 31
+	if o.mem.GetVersion() > 3 {
+		propertyTableOffset = idxV4_PropertiesAddr
+		maxPropertyId = 63
+	}
+
+	assert.LessThan(maxPropertyId+1, int(pid), "PropertyId too large for version")
+
+	propertyTablePointer := o.address.OffsetBytes(propertyTableOffset)
+	propertyTableAddr := memory.Address(o.mem.ReadWord(propertyTablePointer))
+	headerLength, headerDataAddr := o.mem.ReadByteNext(propertyTableAddr)
+	propDataStart := headerDataAddr.OffsetWords(int(headerLength))
+
+	propId, _, nextAddress := parseProperty(o.mem, propDataStart)
+
+	if pid == 0 {
+		return propId
+	}
+
+	for propId != pid && propId != 0 {
+		propId, _, nextAddress = parseProperty(o.mem, nextAddress)
+	}
+
+	assert.NotSame(propId, 0, "Can't get next property of non-existant property")
+
+	propId, _, _ = parseProperty(o.mem, nextAddress)
+	return propId
+}
+
 func (o object) findProperty(pid PropertyId) ([]byte, bool) {
 	propertyTableOffset := idxV1_PropertiesAddr
 	maxPropertyId := 31
@@ -202,9 +234,10 @@ func (o object) findProperty(pid PropertyId) ([]byte, bool) {
 
 	assert.LessThan(maxPropertyId+1, int(pid), "PropertyId too large for version")
 
-	propertyTableAddr := o.address.OffsetBytes(propertyTableOffset)
-	headerLength := int(o.mem.ReadByte(propertyTableAddr))
-	propDataStart := propertyTableAddr.OffsetBytes(headerLength + 1)
+	propertyTablePointer := o.address.OffsetBytes(propertyTableOffset)
+	propertyTableAddr := memory.Address(o.mem.ReadWord(propertyTablePointer))
+	headerLength, headerDataAddr := o.mem.ReadByteNext(propertyTableAddr)
+	propDataStart := headerDataAddr.OffsetWords(int(headerLength))
 
 	propId, data, nextAddress := parseProperty(o.mem, propDataStart)
 
