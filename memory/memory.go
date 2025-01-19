@@ -3,43 +3,50 @@ package memory
 import (
 	"os"
 
-	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
 type word = uint16
 
-func (m Memory) RoutinePackedAddress(address word) Address {
-	return packedAddress(address, m.GetVersion(), m.ReadWord(Addr_ROM_W_RoutinesOffset))
-}
-
-func (m Memory) StringPackedAddress(address word) Address {
-	return packedAddress(address, m.GetVersion(), m.ReadWord(Addr_ROM_W_StringsOffset))
-}
-
-func packedAddress(address word, version int, offset word) Address {
-	assert.Between(1, 9, version, "Unknown Version.")
-
-	switch version {
-	case 1, 2, 3:
-		return Address(2 * address)
-	case 4, 5:
-		return Address(4 * address)
-	case 6, 7:
-		return Address(4*address + 8*offset)
-	case 8:
-		return Address(8 * address)
-	}
-	panic("Unknown version")
-}
-
 type Memory struct {
+	version     int
 	memory      []byte
 	initialized bool
 }
 
+func NewMemoryFromFile(path string, initializer func(*Memory)) (*Memory, error) {
+	bytes, err := os.ReadFile(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	m := Memory{
+		version:     int(bytes[0]),
+		memory:      bytes,
+		initialized: false,
+	}
+
+	initializer(&m)
+	m.initialized = true
+
+	return &m, nil
+}
+
 func (m Memory) GetBytes(address Address, length int) []byte {
-	return m.memory[address : int(address)+length]
+	if !m.initialized {
+		panic("Cannot call Memory#GetBytes during memory initialization!")
+	}
+
+	return m.memory[address:address.OffsetBytes(length)]
+}
+
+func (m Memory) GetBytesAsMemory(address Address, length int) *Memory {
+	return &Memory{
+		version:     m.version,
+		memory:      m.GetBytes(address, length),
+		initialized: m.initialized,
+	}
 }
 
 // NOTE: The warning here is due to the native Go stdmethods checker being over-eager on
@@ -71,28 +78,39 @@ func (m Memory) ReadWordNext(address Address) (word, Address) {
 // needs, but I'm neither willing to change the name of the method to something less
 // representative of its behavior nor to disable the stdmethods check entirely.
 func (m *Memory) WriteByte(address Address, data byte) Address {
-	// TODO: Error when writing to IROM when initialized is false or ROM
+	// TODO: Error when writing to ROM, or IROM when initialized is false
 	m.memory[address] = data
 	return address.OffsetBytes(1)
 }
 
 func (m *Memory) WriteWord(address Address, data word) Address {
-	// TODO: Error when writing to IROM when initialized is false or ROM
-	m.WriteByte(address, byte(data>>8))
-	m.WriteByte(address.OffsetBytes(1), byte(data))
-	return address.OffsetWords(1)
+	// TODO: Error when writing to ROM, or IROM when initialized is false
+	next_address := m.WriteByte(address, byte(data>>8))
+	next_address = m.WriteByte(next_address, byte(data))
+	return next_address
 }
 
-func NewMemory(path string, handler func(*Memory)) *Memory {
-	bytes, err := os.ReadFile(path)
-	assert.NoError(err, "Error loading file.")
-	m := Memory{
-		memory:      bytes,
-		initialized: false,
+func (m Memory) RoutinePackedAddress(address word) Address {
+	return m.packedAddress(address, m.ReadWord(Addr_ROM_W_RoutinesOffset))
+}
+
+func (m Memory) StringPackedAddress(address word) Address {
+	return m.packedAddress(address, m.ReadWord(Addr_ROM_W_StringsOffset))
+}
+
+// NOTE: packedAddresses won't be calculated correctly for relative memory, only absolute memory
+func (m Memory) packedAddress(address word, offset word) Address {
+	switch m.version {
+	case 1, 2, 3:
+		return Address(2 * address)
+	case 4, 5:
+		return Address(4 * address)
+	case 6, 7:
+		return Address(4*address + 8*offset)
+	case 8:
+		return Address(8 * address)
 	}
-	handler(&m)
-	m.initialized = true
-	return &m
+	panic("Unknown version")
 }
 
 func (m Memory) GetZString(address Address) zstring.ZString {

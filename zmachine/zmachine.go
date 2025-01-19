@@ -38,9 +38,10 @@ func (zmachine *ZMachine) endCurrentFrame(value word) {
 }
 
 func Load(story_path string) (*ZMachine, error) {
-	m := memory.NewMemory(story_path, func(m *memory.Memory) {
+	m, err := memory.NewMemoryFromFile(story_path, func(m *memory.Memory) {
 		// TODO: Initialize IROM
 	})
+	assert.NoError(err, "Error loading story")
 
 	stack := append(make([]Frame, 0, 1024), Frame{Counter: m.GetInitialProgramCounter()})
 
@@ -50,7 +51,6 @@ func Load(story_path string) (*ZMachine, error) {
 
 	ctrlchars := zstring.GetDefaultCtrlCharMapping(version)
 	var charset zstring.Charset
-	var err error = nil
 	if alphabetAddress == 0 {
 		alphabet := zstring.GetDefaultAlphabet(m.GetVersion())
 		charset, err = zstring.NewStaticCharset(alphabet, ctrlchars)
