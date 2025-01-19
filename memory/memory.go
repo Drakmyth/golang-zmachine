@@ -41,14 +41,6 @@ func (m Memory) GetBytes(address Address, length int) []byte {
 	return m.memory[address:address.OffsetBytes(length)]
 }
 
-func (m Memory) GetBytesAsMemory(address Address, length int) *Memory {
-	return &Memory{
-		version:     m.version,
-		memory:      m.GetBytes(address, length),
-		initialized: m.initialized,
-	}
-}
-
 // NOTE: The warning here is due to the native Go stdmethods checker being over-eager on
 // ensuring interfaces are being implemented correctly. As of Go 1.23.4 there is no way
 // to configure or override this behavior and the "standard" signature doesn't meet my
