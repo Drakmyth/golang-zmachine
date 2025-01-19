@@ -208,6 +208,10 @@ func (operand Operand) asWord() word {
 	return word(operand)
 }
 
+func (operand Operand) asBytes() []byte {
+	return []byte{byte(operand >> 8), byte(operand)}
+}
+
 func (operand Operand) asByte() byte {
 	return byte(operand)
 }

@@ -26,7 +26,7 @@ type word = uint16
 
 type GetAbbreviationHandler func(bank int, index int) ZString
 
-type parser struct {
+type Parser struct {
 	charset                 Charset
 	pendingAbbreviationBank int
 	multibyteState          int
@@ -35,8 +35,8 @@ type parser struct {
 	getAbbreviation         GetAbbreviationHandler
 }
 
-func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) parser {
-	return parser{
+func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) Parser {
+	return Parser{
 		charset:                 charset,
 		pendingAbbreviationBank: 0,
 		multibyteState:          0,
@@ -46,7 +46,7 @@ func NewParser(charset Charset, abbrevHandler GetAbbreviationHandler) parser {
 	}
 }
 
-func (p parser) Parse(data ZString) (string, error) {
+func (p Parser) Parse(data ZString) (string, error) {
 	zchars, err := parseZCharacters(data)
 	if err != nil {
 		return "", err
@@ -96,7 +96,7 @@ func (p parser) Parse(data ZString) (string, error) {
 	return builder.String(), nil
 }
 
-func (p *parser) processMultibyte(zc ZChar, builder *strings.Builder) {
+func (p *Parser) processMultibyte(zc ZChar, builder *strings.Builder) {
 	switch p.multibyteState {
 	case 0:
 		p.multibyteState++
@@ -110,7 +110,7 @@ func (p *parser) processMultibyte(zc ZChar, builder *strings.Builder) {
 	}
 }
 
-func (p *parser) processControlCharacter(zc ZChar, builder *strings.Builder) error {
+func (p *Parser) processControlCharacter(zc ZChar, builder *strings.Builder) error {
 	ctrl, err := p.charset.GetControlCharacter(zc)
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func parseZCharacters(data ZString) ([]ZChar, error) {
 	return zchars, err
 }
 
-func (p *parser) processAbbreviation(bank int, index int, builder *strings.Builder) error {
+func (p *Parser) processAbbreviation(bank int, index int, builder *strings.Builder) error {
 	abbreviation := p.getAbbreviation(bank, index)
 	oldValue := p.UseAbbreviations
 	p.UseAbbreviations = false

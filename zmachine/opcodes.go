@@ -314,7 +314,7 @@ func div(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func get_child(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object := GetObject(zmachine.Memory, instruction.Operands[0].asObjectId())
-	child := object.GetChild()
+	child := object.Child()
 
 	instruction.StoreVariable.Write(word(child))
 	return zmachine.performBranch(instruction.Branch, child != 0), nil
@@ -322,7 +322,7 @@ func get_child(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func get_parent(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object := GetObject(zmachine.Memory, instruction.Operands[0].asObjectId())
-	parent := object.GetParent()
+	parent := object.Parent()
 
 	instruction.StoreVariable.Write(word(parent))
 	return false, nil
@@ -330,7 +330,7 @@ func get_parent(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func get_sibling(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object := GetObject(zmachine.Memory, instruction.Operands[0].asObjectId())
-	sibling := object.GetSibling()
+	sibling := object.Sibling()
 
 	instruction.StoreVariable.Write(word(sibling))
 	return zmachine.performBranch(instruction.Branch, sibling != 0), nil
@@ -370,7 +370,7 @@ func insert_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object := GetObject(zmachine.Memory, o)
 	destination := GetObject(zmachine.Memory, d)
 
-	object.SetSibling(destination.GetChild())
+	object.SetSibling(destination.Child())
 	destination.SetChild(o)
 
 	return false, nil
@@ -397,7 +397,7 @@ func jin(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := GetObject(zmachine.Memory, instruction.Operands[0].asObjectId())
 	b := instruction.Operands[1].asObjectId()
 
-	return zmachine.performBranch(instruction.Branch, a.GetParent() == b), nil
+	return zmachine.performBranch(instruction.Branch, a.Parent() == b), nil
 }
 
 func jl(zmachine *ZMachine, instruction Instruction) (bool, error) {
@@ -551,7 +551,12 @@ func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func print_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	o := GetObject(zmachine.Memory, instruction.Operands[0].asObjectId())
-	fmt.Printf("%v", zmachine.GetObjectShortName(o))
+	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
+
+	zstr := o.ShortName()
+	str, err := parser.Parse(zstr)
+	assert.NoError(err, "Error parsing object short name")
+	fmt.Printf("%v", str)
 	if zmachine.Debug {
 		fmt.Println()
 	}
@@ -598,7 +603,7 @@ func push(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object_index := instruction.Operands[0].asObjectId()
 	property_index := instruction.Operands[1].asPropertyId()
-	value := instruction.Operands[2].asWord()
+	value := instruction.Operands[2].asBytes()
 
 	object := GetObject(zmachine.Memory, object_index)
 	object.SetProperty(property_index, value)

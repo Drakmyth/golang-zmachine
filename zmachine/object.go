@@ -1,8 +1,6 @@
 package zmachine
 
 import (
-	"fmt"
-
 	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
 	"github.com/Drakmyth/golang-zmachine/zstring"
@@ -11,6 +9,7 @@ import (
 type ObjectId word
 type PropertyId byte
 
+// V1-V3 offset constants
 const (
 	idx_Attributes int = iota // uint32
 	_
@@ -23,6 +22,7 @@ const (
 	_
 )
 
+// V4+ offset constants
 const (
 	_ int = iota // uint48, same start as idx_Attributes
 	_
@@ -40,17 +40,34 @@ const (
 	_
 )
 
-type Object struct {
-	id             ObjectId
-	data           []byte
-	version        int
-	shortName      zstring.ZString
-	propertiesData []byte
+type object struct {
+	mem     *memory.Memory
+	address memory.Address
 }
 
-func (o Object) HasAttribute(index int) bool {
+func GetObject(mem *memory.Memory, oid ObjectId) *object {
+	objectTableAddr := mem.GetObjectsAddress()
+
+	propCount := 31
+	objectSize := 9
+	if mem.GetVersion() > 3 {
+		propCount = 63
+		objectSize = 14
+	}
+
+	objectTreeAddr := objectTableAddr.OffsetWords(propCount)
+
+	objectAddr := objectTreeAddr.OffsetBytes(objectSize * int(oid-1)) // Object IDs start at 1
+
+	return &object{
+		mem:     mem,
+		address: objectAddr,
+	}
+}
+
+func (o object) HasAttribute(index int) bool {
 	maxAttributes := 32
-	if o.version > 3 {
+	if o.mem.GetVersion() > 3 {
 		maxAttributes = 48
 	}
 	assert.LessThan(maxAttributes, index, "Invalid attribute index")
@@ -58,14 +75,15 @@ func (o Object) HasAttribute(index int) bool {
 	bytesToSkip := index / 8
 	newIndex := index % 8
 
-	attributeByte := o.data[idx_Attributes+bytesToSkip]
+	attributeByteAddr := o.address.OffsetBytes(idx_Attributes).OffsetBytes(bytesToSkip)
+	attributeByte := o.mem.ReadByte(attributeByteAddr)
 	hasAttribute := (attributeByte >> (7 - newIndex)) & 0b1
 	return hasAttribute == 1
 }
 
-func (o Object) ClearAttribute(index int) {
+func (o *object) ClearAttribute(index int) {
 	maxAttributes := 32
-	if o.version > 3 {
+	if o.mem.GetVersion() > 3 {
 		maxAttributes = 48
 	}
 	assert.LessThan(maxAttributes, index, "Invalid attribute index")
@@ -73,15 +91,16 @@ func (o Object) ClearAttribute(index int) {
 	bytesToSkip := index / 8
 	newIndex := index % 8
 
-	attributeByte := o.data[idx_Attributes+bytesToSkip]
+	attributeByteAddr := o.address.OffsetBytes(idx_Attributes).OffsetBytes(bytesToSkip)
+	attributeByte := o.mem.ReadByte(attributeByteAddr)
 	mask := ^byte(0b1 << (7 - newIndex))
 	attributeByte = attributeByte & mask
-	o.data[idx_Attributes+bytesToSkip] = attributeByte
+	o.mem.WriteByte(attributeByteAddr, attributeByte)
 }
 
-func (o Object) SetAttribute(index int) {
+func (o *object) SetAttribute(index int) {
 	maxAttributes := 32
-	if o.version > 3 {
+	if o.mem.GetVersion() > 3 {
 		maxAttributes = 48
 	}
 	assert.LessThan(maxAttributes, index, "Invalid attribute index")
@@ -89,212 +108,163 @@ func (o Object) SetAttribute(index int) {
 	bytesToSkip := index / 8
 	newIndex := index % 8
 
-	attributeByte := o.data[idx_Attributes+bytesToSkip]
+	attributeByteAddr := o.address.OffsetBytes(idx_Attributes).OffsetBytes(bytesToSkip)
+	attributeByte := o.mem.ReadByte(attributeByteAddr)
 	attributeByte = attributeByte | (0b1 << (7 - newIndex))
-	o.data[idx_Attributes+bytesToSkip] = attributeByte
+	o.mem.WriteByte(attributeByteAddr, attributeByte)
 }
 
-func (o Object) GetShortName() zstring.ZString {
-	return o.shortName
-}
-
-func (o Object) GetParent() ObjectId {
-	if o.version <= 3 {
-		return ObjectId(o.data[idxV1_Parent])
+func (o object) Parent() ObjectId {
+	if o.mem.GetVersion() <= 3 {
+		return ObjectId(o.mem.ReadByte(o.address.OffsetBytes(idxV1_Parent)))
 	} else {
-		return ObjectId(word(o.data[idxV4_Parent])<<8 | word(o.data[idxV4_Parent+1]))
+		return ObjectId(o.mem.ReadWord(o.address.OffsetBytes(idxV4_Parent)))
 	}
 }
 
-func (o Object) GetSibling() ObjectId {
-	if o.version <= 3 {
-		return ObjectId(o.data[idxV1_Sibling])
+func (o object) Sibling() ObjectId {
+	if o.mem.GetVersion() <= 3 {
+		return ObjectId(o.mem.ReadByte(o.address.OffsetBytes(idxV1_Sibling)))
 	} else {
-		return ObjectId(word(o.data[idxV4_Sibling])<<8 | word(o.data[idxV4_Sibling+1]))
+		return ObjectId(o.mem.ReadWord(o.address.OffsetBytes(idxV4_Sibling)))
 	}
 }
 
-func (o Object) GetChild() ObjectId {
-	if o.version <= 3 {
-		return ObjectId(o.data[idxV1_Child])
+func (o object) Child() ObjectId {
+	if o.mem.GetVersion() <= 3 {
+		return ObjectId(o.mem.ReadByte(o.address.OffsetBytes(idxV1_Child)))
 	} else {
-		return ObjectId(word(o.data[idxV4_Child])<<8 | word(o.data[idxV4_Child+1]))
+		return ObjectId(o.mem.ReadWord(o.address.OffsetBytes(idxV4_Child)))
 	}
 }
 
-func (o *Object) SetParent(parent ObjectId) {
-	if o.version <= 3 {
-		o.data[idxV1_Parent] = byte(parent)
+func (o *object) SetParent(parent ObjectId) {
+	if o.mem.GetVersion() <= 3 {
+		o.mem.WriteByte(o.address.OffsetBytes(idxV1_Parent), byte(parent))
 	} else {
-		o.data[idxV4_Parent] = byte(parent >> 8)
-		o.data[idxV4_Parent+1] = byte(parent)
+		o.mem.WriteWord(o.address.OffsetBytes(idxV4_Parent), word(parent))
 	}
 }
 
-func (o *Object) SetSibling(sibling ObjectId) {
-	if o.version <= 3 {
-		o.data[idxV1_Sibling] = byte(sibling)
+func (o *object) SetSibling(sibling ObjectId) {
+	if o.mem.GetVersion() <= 3 {
+		o.mem.WriteByte(o.address.OffsetBytes(idxV1_Sibling), byte(sibling))
 	} else {
-		o.data[idxV4_Sibling] = byte(sibling >> 8)
-		o.data[idxV4_Sibling+1] = byte(sibling)
+		o.mem.WriteWord(o.address.OffsetBytes(idxV4_Sibling), word(sibling))
 	}
 }
 
-func (o *Object) SetChild(child ObjectId) {
-	if o.version <= 3 {
-		o.data[idxV1_Child] = byte(child)
+func (o *object) SetChild(child ObjectId) {
+	if o.mem.GetVersion() <= 3 {
+		o.mem.WriteByte(o.address.OffsetBytes(idxV1_Child), byte(child))
 	} else {
-		o.data[idxV4_Child] = byte(child >> 8)
-		o.data[idxV4_Child+1] = byte(child)
+		o.mem.WriteWord(o.address.OffsetBytes(idxV4_Child), word(child))
 	}
 }
 
-func (o *Object) SetProperty(property PropertyId, value word) {
-	next_address := 0
-	header_length := o.propertiesData[next_address]
-	next_address++ // Need to advance the address pointer manually as we read
+func (o *object) ShortName() zstring.ZString {
+	propertyTableOffset := idxV1_PropertiesAddr
+	if o.mem.GetVersion() > 3 {
+		propertyTableOffset = idxV4_PropertiesAddr
+	}
 
-	next_address += int(header_length) * 2 // Skip the property table header string
-	property_size := o.propertiesData[next_address]
-	next_address++
+	propertyTableAddr := o.address.OffsetBytes(propertyTableOffset)
+	return o.mem.GetZString(propertyTableAddr.OffsetBytes(1))
+}
 
-	// TODO: V4+ can have 1 or 2 byte sizes
-	for property_size != 0 {
-		prop_number := PropertyId(property_size & 0b11111)
-		prop_length := (property_size >> 5) + 1
-		if prop_length == 0 {
-			prop_length = 64
+func (o object) Property(pid PropertyId) []byte {
+	data, found := o.findProperty(pid)
+
+	if found {
+		return data
+	}
+
+	return getPropertyDefault(o.mem, pid)
+}
+
+func (o *object) SetProperty(pid PropertyId, data []byte) {
+	existingData, found := o.findProperty(pid)
+	assert.True(found, "Cannot set property that does not exist")
+
+	for i := 0; i < min(len(data), len(existingData)); i++ {
+		// TODO: Is this right if the arrays are different lengths?
+		existingData[i] = data[i]
+	}
+}
+
+func (o object) findProperty(pid PropertyId) ([]byte, bool) {
+	propertyTableOffset := idxV1_PropertiesAddr
+	maxPropertyId := 31
+	if o.mem.GetVersion() > 3 {
+		propertyTableOffset = idxV4_PropertiesAddr
+		maxPropertyId = 63
+	}
+
+	assert.LessThan(maxPropertyId+1, int(pid), "PropertyId too large for version")
+
+	propertyTableAddr := o.address.OffsetBytes(propertyTableOffset)
+	headerLength := int(o.mem.ReadByte(propertyTableAddr))
+	propDataStart := propertyTableAddr.OffsetBytes(headerLength + 1)
+
+	propId, data, nextAddress := parseProperty(o.mem, propDataStart)
+
+	for propId != pid && propId != 0 {
+		propId, data, nextAddress = parseProperty(o.mem, nextAddress)
+	}
+
+	if propId == pid {
+		return data, true
+	}
+
+	return []byte{}, false
+}
+
+func parseProperty(mem *memory.Memory, address memory.Address) (PropertyId, []byte, memory.Address) {
+	if mem.GetVersion() <= 3 {
+		return parsePropertyV1(mem, address)
+	}
+	return parsePropertyV4(mem, address)
+}
+
+func parsePropertyV1(mem *memory.Memory, address memory.Address) (PropertyId, []byte, memory.Address) {
+	sizeByte, nextAddress := mem.ReadByteNext(address)
+
+	if sizeByte == 0 {
+		return 0, []byte{}, nextAddress
+	}
+
+	propId := PropertyId(sizeByte & 0b11111) // bottom 5 bits
+	length := int((sizeByte >> 5) + 1)
+	data, nextAddress := mem.GetBytesNext(nextAddress, length)
+	return propId, data, nextAddress
+}
+
+func parsePropertyV4(mem *memory.Memory, address memory.Address) (PropertyId, []byte, memory.Address) {
+	sizeByte, nextAddress := mem.ReadByteNext(address)
+
+	if sizeByte == 0 {
+		return 0, []byte{}, nextAddress
+	}
+
+	propId := PropertyId(sizeByte & 0b111111) // bottom 6 bits
+	var length int
+
+	if (sizeByte >> 7) == 0 {
+		length = int((sizeByte>>6)&0b1) + 1
+	} else {
+		sizeByte, nextAddress = mem.ReadByteNext(nextAddress)
+		length = int(sizeByte & 0b111111) // bottom 6 bits
+		if length == 0 {
+			length = 64
 		}
-
-		if prop_number == property {
-			switch prop_length {
-			case 1:
-				o.propertiesData[next_address] = byte(value)
-			case 2:
-				o.propertiesData[next_address] = byte(value >> 8)
-				o.propertiesData[next_address+1] = byte(value)
-			default:
-				panic(fmt.Sprintf("unsupported put_prop data length: %d", prop_length))
-			}
-			return
-		} else if prop_number > property {
-			next_address += int(prop_length)
-			property_size = o.propertiesData[next_address]
-			next_address++
-			continue
-		} else {
-			break
-		}
 	}
 
-	panic(fmt.Sprintf("Property %d not found on Object %d", property, o.id))
+	data, nextAddress := mem.GetBytesNext(nextAddress, length)
+	return propId, data, nextAddress
 }
 
-func decodePropertySizeByte(size byte) (byte, PropertyId) {
-	length := (size >> 5) + 1
-	property := size & 0b11111
-	return length, PropertyId(property)
+func getPropertyDefault(mem *memory.Memory, pid PropertyId) []byte {
+	defaultsTableAddr := mem.GetObjectsAddress()
+	propDefaultAddr := defaultsTableAddr.OffsetWords(int(pid) - 1) // Property IDs start at 1
+	return mem.GetBytes(propDefaultAddr, 2)
 }
-
-func getPropertyDefaultsTableLength(version int) int {
-	if version <= 3 {
-		return 31
-	}
-
-	return 63
-}
-
-func getObjectSize(version int) int {
-	if version <= 3 {
-		return 9
-	}
-
-	return 14
-}
-
-func getMaxObjectCount(version int) int {
-	if version <= 3 {
-		return 255
-	}
-
-	return 65535
-}
-
-func GetObject(m *memory.Memory, objectId ObjectId) Object {
-	objectNumber := objectId - 1 // Object 0 is not stored in memory, so we shift the index back one
-
-	objectTableAddress := m.GetObjectsAddress()
-	version := m.GetVersion()
-	propertyDefaultsTableLength := getPropertyDefaultsTableLength(version)
-	objectTreeAddress := objectTableAddress.OffsetWords(propertyDefaultsTableLength)
-	objectSize := getObjectSize(version)
-	// maxObjectCount := getMaxObjectCount(version)
-
-	objectAddress := objectTreeAddress.OffsetBytes(objectSize * int(objectNumber))
-	propertyTableAddressOffset := idxV1_PropertiesAddr
-	if version > 3 {
-		propertyTableAddressOffset = idxV4_PropertiesAddr
-	}
-	propertyTableAddress := memory.Address(m.ReadWord(objectAddress.OffsetBytes(propertyTableAddressOffset)))
-	shortName, propertiesData := getPropertyTableData(m, propertyTableAddress)
-
-	object := Object{
-		id:             objectId,
-		data:           m.GetBytes(objectAddress, objectSize),
-		version:        version,
-		shortName:      shortName,
-		propertiesData: propertiesData,
-	}
-
-	return object
-}
-
-func getPropertyTableData(m *memory.Memory, propertyTableAddress memory.Address) (zstring.ZString, []byte) {
-	headerLength, next_address := m.ReadByteNext(propertyTableAddress)
-	headerLengthByteCount := int(headerLength) * 2
-	shortName := zstring.ZString(m.GetBytes(next_address, headerLengthByteCount))
-	next_address = next_address.OffsetBytes(headerLengthByteCount)
-	property_size, next_address := m.ReadByteNext(next_address)
-
-	for property_size != 0 {
-		prop_length := (property_size >> 5) + 1
-		if prop_length == 0 {
-			prop_length = 64
-		}
-		next_address = next_address.OffsetBytes(int(prop_length))
-		property_size, next_address = m.ReadByteNext(next_address)
-	}
-
-	return shortName, m.GetBytes(propertyTableAddress, int(next_address)-int(propertyTableAddress))
-}
-
-// func (zmachine ZMachine) readProperties(address memory.Address) (PropertiesTable, memory.Address) {
-// 	next_address := address.OffsetBytes(1) // The length byte is redundant since it's part of the name string
-// 	var object_name string
-// 	object_name, next_address = zmachine.readZString(next_address)
-
-// 	// TODO: Version 4+ also supports 2-byte sizes and has a slightly different size-byte structure
-// 	var prop_size byte
-// 	prop_size, next_address = zmachine.Memory.ReadByteNext(next_address)
-// 	table := PropertiesTable{Name: object_name, Properties: make(map[byte][]byte)}
-// 	for prop_size != 0 {
-// 		prop_length := int(prop_size>>5) + 1
-// 		prop_number := prop_size & 0b11111
-// 		var prop_data []byte = make([]byte, prop_length)
-// 		for i := 0; i < prop_length; i++ {
-// 			var next_byte byte
-// 			next_byte, next_address = zmachine.Memory.ReadByteNext(next_address)
-// 			prop_data[i] = next_byte
-// 		}
-// 		table.Properties[prop_number] = prop_data
-// 		prop_size, next_address = zmachine.Memory.ReadByteNext(next_address)
-// 	}
-
-// 	return table, next_address
-// }
-
-// func (zmachine ZMachine) getPropertyDefault(index int) word {
-// 	address := zmachine.Memory.GetObjectsAddress()
-// 	val := zmachine.Memory.ReadWord(address.OffsetWords(index))
-// 	return val
-// }

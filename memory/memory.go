@@ -41,6 +41,10 @@ func (m Memory) GetBytes(address Address, length int) []byte {
 	return m.memory[address:address.OffsetBytes(length)]
 }
 
+func (m Memory) GetBytesNext(address Address, length int) ([]byte, Address) {
+	return m.GetBytes(address, length), address.OffsetBytes(length)
+}
+
 // NOTE: The warning here is due to the native Go stdmethods checker being over-eager on
 // ensuring interfaces are being implemented correctly. As of Go 1.23.4 there is no way
 // to configure or override this behavior and the "standard" signature doesn't meet my
