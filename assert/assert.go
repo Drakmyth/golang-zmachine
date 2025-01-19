@@ -23,6 +23,12 @@ func LessThan[E cmp.Ordered](exclusiveMax E, v E, message string) {
 	}
 }
 
+func LessThanEqual[E cmp.Ordered](exclusiveMax E, v E, message string) {
+	if v > exclusiveMax {
+		panic(message)
+	}
+}
+
 func NoError(v error, message string) {
 	if v != nil {
 		panic(message)

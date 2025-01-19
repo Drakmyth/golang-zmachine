@@ -29,6 +29,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x0e: {IF_Long, IM_None, []OperandType{OT_Small, OT_Small}, insert_obj},
 	0x0f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadw},
 	0x10: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, loadb},
+	0x12: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, get_prop_addr},
 	0x13: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, get_next_prop},
 	0x14: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, add},
 	0x15: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, sub},
@@ -50,6 +51,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x2e: {IF_Long, IM_None, []OperandType{OT_Small, OT_Variable}, insert_obj},
 	0x2f: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadw},
 	0x30: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, loadb},
+	0x32: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, get_prop_addr},
 	0x33: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, get_next_prop},
 	0x34: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, add},
 	0x35: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, sub},
@@ -71,6 +73,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x4e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Small}, insert_obj},
 	0x4f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadw},
 	0x50: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, loadb},
+	0x52: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, get_prop_addr},
 	0x53: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, get_next_prop},
 	0x54: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, add},
 	0x55: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, sub},
@@ -92,6 +95,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x6e: {IF_Long, IM_None, []OperandType{OT_Variable, OT_Variable}, insert_obj},
 	0x6f: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, loadw},
 	0x70: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, loadb},
+	0x72: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, get_prop_addr},
 	0x73: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, get_next_prop},
 	0x74: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, add},
 	0x75: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, sub},
@@ -157,6 +161,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xce: {IF_Variable, IM_None, []OperandType{}, insert_obj},
 	0xcf: {IF_Variable, IM_Store, []OperandType{}, loadw},
 	0xd0: {IF_Variable, IM_Store, []OperandType{}, loadb},
+	0xd2: {IF_Variable, IM_Store, []OperandType{}, get_prop_addr},
 	0xd3: {IF_Variable, IM_Store, []OperandType{}, get_next_prop},
 	0xd4: {IF_Variable, IM_Store, []OperandType{}, add},
 	0xd5: {IF_Variable, IM_Store, []OperandType{}, sub},
@@ -326,6 +331,14 @@ func get_parent(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	parent := object.Parent()
 
 	instruction.StoreVariable.Write(word(parent))
+	return false, nil
+}
+
+func get_prop_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	object := GetObject(zmachine.Memory, instruction.Operands[0].asObjectId())
+	propertyId := instruction.Operands[1].asPropertyId()
+
+	instruction.StoreVariable.Write(word(object.GetPropertyDataAddress(propertyId)))
 	return false, nil
 }
 

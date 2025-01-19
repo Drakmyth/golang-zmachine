@@ -174,6 +174,7 @@ func (o *object) ShortName() zstring.ZString {
 }
 
 func (o object) Property(pid PropertyId) []byte {
+	o.assertValidPropertyId(pid)
 	data, found := o.findProperty(pid)
 
 	if found {
@@ -184,6 +185,7 @@ func (o object) Property(pid PropertyId) []byte {
 }
 
 func (o *object) SetProperty(pid PropertyId, data []byte) {
+	o.assertValidPropertyId(pid)
 	existingData, found := o.findProperty(pid)
 	assert.True(found, "Cannot set property that does not exist")
 
@@ -194,21 +196,8 @@ func (o *object) SetProperty(pid PropertyId, data []byte) {
 }
 
 func (o object) GetNextPropertyId(pid PropertyId) PropertyId {
-	propertyTableOffset := idxV1_PropertiesAddr
-	maxPropertyId := 31
-	if o.mem.GetVersion() > 3 {
-		propertyTableOffset = idxV4_PropertiesAddr
-		maxPropertyId = 63
-	}
-
-	assert.LessThan(maxPropertyId+1, int(pid), "PropertyId too large for version")
-
-	propertyTablePointer := o.address.OffsetBytes(propertyTableOffset)
-	propertyTableAddr := memory.Address(o.mem.ReadWord(propertyTablePointer))
-	headerLength, headerDataAddr := o.mem.ReadByteNext(propertyTableAddr)
-	propDataStart := headerDataAddr.OffsetWords(int(headerLength))
-
-	propId, _, nextAddress := parseProperty(o.mem, propDataStart)
+	o.assertValidPropertyId(pid)
+	propId, _, nextAddress := o.getFirstProperty()
 
 	if pid == 0 {
 		return propId
@@ -217,29 +206,28 @@ func (o object) GetNextPropertyId(pid PropertyId) PropertyId {
 	for propId != pid && propId != 0 {
 		propId, _, nextAddress = parseProperty(o.mem, nextAddress)
 	}
-
 	assert.NotSame(propId, 0, "Can't get next property of non-existant property")
 
 	propId, _, _ = parseProperty(o.mem, nextAddress)
 	return propId
 }
 
-func (o object) findProperty(pid PropertyId) ([]byte, bool) {
-	propertyTableOffset := idxV1_PropertiesAddr
-	maxPropertyId := 31
-	if o.mem.GetVersion() > 3 {
-		propertyTableOffset = idxV4_PropertiesAddr
-		maxPropertyId = 63
+func (o object) GetPropertyDataAddress(pid PropertyId) memory.Address {
+	o.assertValidPropertyId(pid)
+	propId, data, nextAddress := o.getFirstProperty()
+
+	for propId != pid && propId != 0 {
+		propId, data, nextAddress = parseProperty(o.mem, nextAddress)
+	}
+	if propId == 0 {
+		return 0
 	}
 
-	assert.LessThan(maxPropertyId+1, int(pid), "PropertyId too large for version")
+	return nextAddress.OffsetBytes(-len(data))
+}
 
-	propertyTablePointer := o.address.OffsetBytes(propertyTableOffset)
-	propertyTableAddr := memory.Address(o.mem.ReadWord(propertyTablePointer))
-	headerLength, headerDataAddr := o.mem.ReadByteNext(propertyTableAddr)
-	propDataStart := headerDataAddr.OffsetWords(int(headerLength))
-
-	propId, data, nextAddress := parseProperty(o.mem, propDataStart)
+func (o object) findProperty(pid PropertyId) ([]byte, bool) {
+	propId, data, nextAddress := o.getFirstProperty()
 
 	for propId != pid && propId != 0 {
 		propId, data, nextAddress = parseProperty(o.mem, nextAddress)
@@ -250,6 +238,20 @@ func (o object) findProperty(pid PropertyId) ([]byte, bool) {
 	}
 
 	return []byte{}, false
+}
+
+func (o object) getFirstProperty() (PropertyId, []byte, memory.Address) {
+	propertyTableOffset := idxV1_PropertiesAddr
+	if o.mem.GetVersion() > 3 {
+		propertyTableOffset = idxV4_PropertiesAddr
+	}
+
+	propertyTablePointer := o.address.OffsetBytes(propertyTableOffset)
+	propertyTableAddr := memory.Address(o.mem.ReadWord(propertyTablePointer))
+	headerLength, headerDataAddr := o.mem.ReadByteNext(propertyTableAddr)
+	propertyAddr := headerDataAddr.OffsetWords(int(headerLength))
+
+	return parseProperty(o.mem, propertyAddr)
 }
 
 func parseProperty(mem *memory.Memory, address memory.Address) (PropertyId, []byte, memory.Address) {
@@ -300,4 +302,13 @@ func getPropertyDefault(mem *memory.Memory, pid PropertyId) []byte {
 	defaultsTableAddr := mem.GetObjectsAddress()
 	propDefaultAddr := defaultsTableAddr.OffsetWords(int(pid) - 1) // Property IDs start at 1
 	return mem.GetBytes(propDefaultAddr, 2)
+}
+
+func (o object) assertValidPropertyId(pid PropertyId) {
+	maxPropertyId := 31
+	if o.mem.GetVersion() > 3 {
+		maxPropertyId = 63
+	}
+
+	assert.LessThanEqual(maxPropertyId, int(pid), "PropertyId too large for version")
 }
