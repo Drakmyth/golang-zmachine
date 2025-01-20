@@ -106,6 +106,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x81: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Large}, get_sibling},
 	0x82: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Large}, get_child},
 	0x83: {IF_Short, IM_Store, []OperandType{OT_Large}, get_parent},
+	0x84: {IF_Short, IM_Store, []OperandType{OT_Large}, get_prop_len},
 	0x85: {IF_Short, IM_None, []OperandType{OT_Large}, inc},
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
 	// 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
@@ -119,6 +120,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x91: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Small}, get_sibling},
 	0x92: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Small}, get_child},
 	0x93: {IF_Short, IM_Store, []OperandType{OT_Small}, get_parent},
+	0x94: {IF_Short, IM_Store, []OperandType{OT_Small}, get_prop_len},
 	0x95: {IF_Short, IM_None, []OperandType{OT_Small}, inc},
 	0x96: {IF_Short, IM_None, []OperandType{OT_Small}, dec},
 	0x9a: {IF_Short, IM_None, []OperandType{OT_Small}, print_obj},
@@ -131,6 +133,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xa1: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Variable}, get_sibling},
 	0xa2: {IF_Short, IM_Branch | IM_Store, []OperandType{OT_Variable}, get_child},
 	0xa3: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_parent},
+	0xa4: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_prop_len},
 	0xa5: {IF_Short, IM_None, []OperandType{OT_Variable}, inc},
 	0xa6: {IF_Short, IM_None, []OperandType{OT_Variable}, dec},
 	0xaa: {IF_Short, IM_None, []OperandType{OT_Variable}, print_obj},
@@ -339,6 +342,23 @@ func get_prop_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	propertyId := instruction.Operands[1].asPropertyId()
 
 	instruction.StoreVariable.Write(word(object.GetPropertyDataAddress(propertyId)))
+	return false, nil
+}
+
+func get_prop_len(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	propDataAddr := instruction.Operands[0].asAddress()
+	sizeByte := zmachine.Memory.ReadByte(propDataAddr.OffsetBytes(-1))
+	length := 0
+
+	if zmachine.Memory.GetVersion() <= 3 {
+		length = int(sizeByte>>5) + 1
+	} else if (sizeByte >> 7) == 0 {
+		length = int((sizeByte>>6)&0b1) + 1
+	} else {
+		length = int(sizeByte & 0b111111)
+	}
+
+	instruction.StoreVariable.Write(word(length))
 	return false, nil
 }
 
