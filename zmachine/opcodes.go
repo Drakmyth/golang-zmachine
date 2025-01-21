@@ -469,7 +469,7 @@ func load(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
 	value := variable.ReadInPlace()
-	instruction.StoreVariable.WriteInPlace(value)
+	instruction.StoreVariable.Write(value)
 
 	return false, nil
 }
@@ -730,16 +730,6 @@ func set_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return false, nil
 }
 
-func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	array := instruction.Operands[0].asAddress()
-	word_index := instruction.Operands[1].asInt()
-	value := instruction.Operands[2].asWord()
-
-	address := array.OffsetWords(word_index)
-	zmachine.Memory.WriteWord(address, value)
-	return false, nil
-}
-
 func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	value := instruction.Operands[1].asWord()
@@ -755,6 +745,16 @@ func storeb(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 	address := array.OffsetBytes(byte_index)
 	zmachine.Memory.WriteByte(address, value)
+	return false, nil
+}
+
+func storew(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	array := instruction.Operands[0].asAddress()
+	word_index := instruction.Operands[1].asInt()
+	value := instruction.Operands[2].asWord()
+
+	address := array.OffsetWords(word_index)
+	zmachine.Memory.WriteWord(address, value)
 	return false, nil
 }
 
