@@ -83,6 +83,20 @@ func (variable Variable) Read() word {
 	}
 }
 
+func (variable Variable) ReadInPlace() word {
+	zmachine := variable.zmachine
+
+	if variable.isStack() {
+		frame, err := zmachine.Stack.Peek()
+		assert.NoError(err, "Error peeking frame stack")
+		value, err := frame.Stack.Peek()
+		assert.NoError(err, "Error peeking local stack")
+		return *value
+	}
+
+	return variable.Read()
+}
+
 func (variable *Variable) Write(value word) {
 	zmachine := variable.zmachine
 
@@ -96,6 +110,23 @@ func (variable *Variable) Write(value word) {
 		frame.Locals[variable.Number.asLocal()] = value
 	} else {
 		zmachine.Memory.WriteWord(zmachine.Memory.GetGlobalsAddress().OffsetWords(variable.Number.asGlobal()), value)
+	}
+}
+
+func (variable *Variable) WriteInPlace(value word) {
+	zmachine := variable.zmachine
+
+	if variable.isStack() {
+		frame, err := zmachine.Stack.Peek()
+		assert.NoError(err, "Error peeking frame stack")
+		stackSize := frame.Stack.Size()
+		if stackSize > 0 {
+			frame.Stack[stackSize-1] = value
+		} else {
+			frame.Stack.Push(value)
+		}
+	} else {
+		variable.Write(value)
 	}
 }
 

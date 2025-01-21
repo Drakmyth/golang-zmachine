@@ -284,12 +284,9 @@ func clear_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func dec(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
-	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
-	// Is this actually a problem? It will pop it off, but then push it right back on.
-	// The address will change potentially, but does that matter?
-	value := int16(variable.Read())
+	value := int16(variable.ReadInPlace())
 	value--
-	variable.Write(uint16(value))
+	variable.WriteInPlace(uint16(value))
 
 	return false, nil
 }
@@ -298,12 +295,9 @@ func dec_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	condition := int16(instruction.Operands[1].asWord())
 
-	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
-	// Is this actually a problem? It will pop it off, but then push it right back on.
-	// The address will change potentially, but does that matter?
-	value := int16(variable.Read())
+	value := int16(variable.ReadInPlace())
 	value--
-	variable.Write(uint16(value))
+	variable.WriteInPlace(uint16(value))
 
 	return zmachine.performBranch(instruction.Branch, value < condition), nil
 }
@@ -393,12 +387,9 @@ func get_sibling(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func inc(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
-	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
-	// Is this actually a problem? It will pop it off, but then push it right back on.
-	// The address will change potentially, but does that matter?
-	value := int16(variable.Read())
+	value := int16(variable.ReadInPlace())
 	value++
-	variable.Write(uint16(value))
+	variable.WriteInPlace(uint16(value))
 
 	return false, nil
 }
@@ -407,12 +398,9 @@ func inc_chk(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	condition := int16(instruction.Operands[1].asWord())
 
-	// TODO: Fix stack handling, needs to read/write in place instead of modifying stack
-	// Is this actually a problem? It will pop it off, but then push it right back on.
-	// The address will change potentially, but does that matter?
-	value := int16(variable.Read())
+	value := int16(variable.ReadInPlace())
 	value++
-	variable.Write(uint16(value))
+	variable.WriteInPlace(uint16(value))
 
 	return zmachine.performBranch(instruction.Branch, value > condition), nil
 }
@@ -480,8 +468,8 @@ func jz(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func load(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 
-	value := variable.Read()
-	instruction.StoreVariable.Write(value)
+	value := variable.ReadInPlace()
+	instruction.StoreVariable.WriteInPlace(value)
 
 	return false, nil
 }
@@ -640,7 +628,7 @@ func pull(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	assert.NoError(err, "Error peeking frame stack")
 	value, err := frame.Stack.Pop()
 	assert.NoError(err, "Error popping local stack")
-	variable.Write(value)
+	variable.WriteInPlace(value)
 
 	return false, nil
 }
@@ -756,7 +744,7 @@ func store(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	variable := zmachine.getVariable(instruction.Operands[0].asVarNum())
 	value := instruction.Operands[1].asWord()
 
-	variable.Write(value)
+	variable.WriteInPlace(value)
 	return false, nil
 }
 
