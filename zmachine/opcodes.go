@@ -424,6 +424,7 @@ func insert_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	object := GetObject(zmachine.Memory, o)
 	destination := GetObject(zmachine.Memory, d)
 
+	object.SetParent(d)
 	object.SetSibling(destination.Child())
 	destination.SetChild(o)
 
