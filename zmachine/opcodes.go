@@ -114,6 +114,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x85: {IF_Short, IM_None, []OperandType{OT_Large}, inc},
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
 	// 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
+	0x89: {IF_Short, IM_None, []OperandType{OT_Large}, remove_obj},
 	0x8a: {IF_Short, IM_None, []OperandType{OT_Large}, print_obj},
 	0x8b: {IF_Short, IM_None, []OperandType{OT_Large}, ret},
 	0x8c: {IF_Short, IM_None, []OperandType{OT_Large}, jump},
@@ -127,6 +128,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x94: {IF_Short, IM_Store, []OperandType{OT_Small}, get_prop_len},
 	0x95: {IF_Short, IM_None, []OperandType{OT_Small}, inc},
 	0x96: {IF_Short, IM_None, []OperandType{OT_Small}, dec},
+	0x99: {IF_Short, IM_None, []OperandType{OT_Small}, remove_obj},
 	0x9a: {IF_Short, IM_None, []OperandType{OT_Small}, print_obj},
 	0x9b: {IF_Short, IM_None, []OperandType{OT_Small}, ret},
 	0x9c: {IF_Short, IM_None, []OperandType{OT_Small}, jump},
@@ -140,6 +142,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xa4: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_prop_len},
 	0xa5: {IF_Short, IM_None, []OperandType{OT_Variable}, inc},
 	0xa6: {IF_Short, IM_None, []OperandType{OT_Variable}, dec},
+	0xa9: {IF_Short, IM_None, []OperandType{OT_Variable}, remove_obj},
 	0xaa: {IF_Short, IM_None, []OperandType{OT_Variable}, print_obj},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
 	0xac: {IF_Short, IM_None, []OperandType{OT_Variable}, jump},
@@ -664,6 +667,40 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func quit(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	os.Exit(0)
+
+	return false, nil
+}
+
+func remove_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	oid := instruction.Operands[0].asObjectId()
+	object := GetObject(zmachine.Memory, oid)
+
+	parentId := object.Parent()
+	if parentId == 0 {
+		return false, nil
+	}
+
+	parent := GetObject(zmachine.Memory, object.Parent())
+	object.SetParent(0)
+
+	parentChild := parent.Child()
+	if parentChild == oid {
+		parent.SetChild(object.Sibling())
+		return false, nil
+	}
+
+	if parentChild != 0 {
+		siblingId := parentChild
+		for siblingId != 0 {
+			sibling := GetObject(zmachine.Memory, siblingId)
+			siblingSibling := sibling.Sibling()
+			if siblingSibling == oid {
+				sibling.SetSibling(object.Sibling())
+				break
+			}
+			siblingId = siblingSibling
+		}
+	}
 
 	return false, nil
 }
