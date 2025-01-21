@@ -20,6 +20,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x04: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, dec_chk},
 	0x05: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, inc_chk},
 	0x06: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, jin},
+	0x07: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, test},
 	0x08: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, or},
 	0x09: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Small}, and},
 	0x0a: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Small}, test_attr},
@@ -43,6 +44,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x24: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, dec_chk},
 	0x25: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, inc_chk},
 	0x26: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, jin},
+	0x27: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, test},
 	0x28: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, or},
 	0x29: {IF_Long, IM_Store, []OperandType{OT_Small, OT_Variable}, and},
 	0x2a: {IF_Long, IM_Branch, []OperandType{OT_Small, OT_Variable}, test_attr},
@@ -66,6 +68,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x44: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, dec_chk},
 	0x45: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, inc_chk},
 	0x46: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, jin},
+	0x47: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test},
 	0x48: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, or},
 	0x49: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Small}, and},
 	0x4a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Small}, test_attr},
@@ -89,6 +92,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x64: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, dec_chk},
 	0x65: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, inc_chk},
 	0x66: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, jin},
+	0x67: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, test},
 	0x68: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, or},
 	0x69: {IF_Long, IM_Store, []OperandType{OT_Variable, OT_Variable}, and},
 	0x6a: {IF_Long, IM_Branch, []OperandType{OT_Variable, OT_Variable}, test_attr},
@@ -162,6 +166,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xc4: {IF_Variable, IM_Branch, []OperandType{}, dec_chk},
 	0xc5: {IF_Variable, IM_Branch, []OperandType{}, inc_chk},
 	0xc6: {IF_Variable, IM_Branch, []OperandType{}, jin},
+	0xc7: {IF_Variable, IM_Branch, []OperandType{}, test},
 	0xc8: {IF_Variable, IM_Store, []OperandType{}, or},
 	0xc9: {IF_Variable, IM_Store, []OperandType{}, and},
 	0xca: {IF_Variable, IM_Branch, []OperandType{}, test_attr},
@@ -763,6 +768,13 @@ func sub(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	b := int16(instruction.Operands[1].asWord())
 	instruction.StoreVariable.Write(uint16(a - b))
 	return false, nil
+}
+
+func test(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	bitmask := instruction.Operands[0].asWord()
+	flags := instruction.Operands[1].asWord()
+
+	return zmachine.performBranch(instruction.Branch, bitmask&flags == flags), nil
 }
 
 func test_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
