@@ -3,8 +3,10 @@ package zmachine
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
@@ -190,6 +192,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xe3: {IF_Variable, IM_None, []OperandType{}, put_prop},
 	0xe5: {IF_Variable, IM_None, []OperandType{}, print_char},
 	0xe6: {IF_Variable, IM_None, []OperandType{}, print_num},
+	0xe7: {IF_Variable, IM_Store, []OperandType{}, random},
 	0xe8: {IF_Variable, IM_None, []OperandType{}, push},
 	0xe9: {IF_Variable, IM_None, []OperandType{}, pull}, // There's an extra argument here in V6
 }
@@ -661,6 +664,24 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func quit(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	os.Exit(0)
+
+	return false, nil
+}
+
+func random(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	r := int16(instruction.Operands[0].asWord())
+
+	if r > 0 {
+		value := zmachine.Random.IntN(int(r)) + 1
+		instruction.StoreVariable.Write(word(value))
+	} else {
+		seed := uint64(r)
+		if r == 0 {
+			seed = uint64(time.Now().UnixMilli())
+		}
+		zmachine.Random = rand.New(rand.NewPCG(seed, seed))
+		instruction.StoreVariable.Write(0)
+	}
 
 	return false, nil
 }

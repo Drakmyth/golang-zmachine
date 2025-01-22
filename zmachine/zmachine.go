@@ -3,6 +3,8 @@ package zmachine
 import (
 	"bytes"
 	"fmt"
+	"math/rand/v2"
+	"time"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
@@ -16,6 +18,7 @@ type word = uint16
 type ZMachine struct {
 	Debug   bool
 	Memory  *memory.Memory
+	Random  *rand.Rand
 	Stack   stack.Stack[Frame]
 	Charset zstring.Charset
 }
@@ -61,8 +64,12 @@ func Load(story_path string) (*ZMachine, error) {
 		assert.NoError(err, "Error instantiating dynamic charset")
 	}
 
+	seed := uint64(time.Now().UnixMilli())
+	rand := rand.New(rand.NewPCG(seed, seed))
+
 	zmachine := ZMachine{
 		Memory:  m,
+		Random:  rand,
 		Stack:   stack,
 		Charset: charset,
 	}
