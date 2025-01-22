@@ -100,7 +100,7 @@ const (
 	_
 	Address_StandardRev // 0x32 word
 	_
-	Addr_ROM_A_AltCharSet
+	Addr_ROM_A_AlphabetTable
 	_
 	Addr_ROM_A_HeaderExtension
 	_
@@ -114,8 +114,8 @@ const (
 	_
 )
 
-func (m Memory) GetVersion() byte {
-	return m.ReadByte(Addr_ROM_B_Version)
+func (m Memory) GetVersion() int {
+	return int(m.ReadByte(Addr_ROM_B_Version))
 }
 
 func (m Memory) GetInitialProgramCounter() Address {

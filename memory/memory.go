@@ -3,53 +3,53 @@ package memory
 import (
 	"os"
 
-	"github.com/Drakmyth/golang-zmachine/assert"
+	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
 type word = uint16
-type Address word
-
-// Should only be used in the Abbreviations table
-func WordAddress(address word) Address {
-	return Address(2 * address)
-}
-
-func (m Memory) RoutinePackedAddress(address word) Address {
-	return packedAddress(address, m.GetVersion(), m.ReadWord(Addr_ROM_W_RoutinesOffset))
-}
-
-func (m Memory) StringPackedAddress(address word) Address {
-	return packedAddress(address, m.GetVersion(), m.ReadWord(Addr_ROM_W_StringsOffset))
-}
-
-func packedAddress(address word, version byte, offset uint16) Address {
-	assert.Between(1, 9, version, "Unknown Version.")
-	assert.NotContains([]byte{6, 7}, version, "PackedAddress not implemented in Version 6/7. Call OffsetPackedAddress instead.")
-
-	switch version {
-	case 1, 2, 3:
-		return Address(2 * address)
-	case 4, 5:
-		return Address(4 * address)
-	case 6, 7:
-		return Address(4*address + 8*offset)
-	case 8:
-		return Address(8 * address)
-	}
-	panic("Unknown version")
-}
-
-func (address Address) OffsetBytes(amount int) Address {
-	return Address(int(address) + amount)
-}
-
-func (address Address) OffsetWords(amount int) Address {
-	return Address(int(address) + 2*amount)
-}
 
 type Memory struct {
+	path        string
+	version     int
 	memory      []byte
 	initialized bool
+}
+
+func NewMemoryFromFile(path string, initializer func(*Memory)) (*Memory, error) {
+	bytes, err := os.ReadFile(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	m := Memory{
+		path:        path,
+		version:     int(bytes[0]),
+		memory:      bytes,
+		initialized: false,
+	}
+
+	initializer(&m)
+	m.initialized = true
+
+	return &m, nil
+}
+
+// TODO: This might be needed to support checksum verification. See `verify` opcode.
+// func (m Memory) OriginalFileState() (*Memory, error) {
+// 	return NewMemoryFromFile(m.path, func(memory *Memory) {})
+// }
+
+func (m Memory) GetBytes(address Address, length int) []byte {
+	if !m.initialized {
+		panic("Cannot call Memory#GetBytes during memory initialization!")
+	}
+
+	return m.memory[address:address.OffsetBytes(length)]
+}
+
+func (m Memory) GetBytesNext(address Address, length int) ([]byte, Address) {
+	return m.GetBytes(address, length), address.OffsetBytes(length)
 }
 
 // NOTE: The warning here is due to the native Go stdmethods checker being over-eager on
@@ -81,26 +81,63 @@ func (m Memory) ReadWordNext(address Address) (word, Address) {
 // needs, but I'm neither willing to change the name of the method to something less
 // representative of its behavior nor to disable the stdmethods check entirely.
 func (m *Memory) WriteByte(address Address, data byte) Address {
-	// TODO: Error when writing to IROM when initialized is false or ROM
+	// TODO: Error when writing to ROM, or IROM when initialized is false
 	m.memory[address] = data
 	return address.OffsetBytes(1)
 }
 
 func (m *Memory) WriteWord(address Address, data word) Address {
-	// TODO: Error when writing to IROM when initialized is false or ROM
-	m.WriteByte(address, byte(data>>8))
-	m.WriteByte(address.OffsetBytes(1), byte(data))
-	return address.OffsetWords(1)
+	// TODO: Error when writing to ROM, or IROM when initialized is false
+	next_address := m.WriteByte(address, byte(data>>8))
+	next_address = m.WriteByte(next_address, byte(data))
+	return next_address
 }
 
-func NewMemory(path string, handler func(*Memory)) *Memory {
-	bytes, err := os.ReadFile(path)
-	assert.NoError(err, "Error loading file.")
-	m := Memory{
-		memory:      bytes,
-		initialized: false,
+func (m Memory) RoutinePackedAddress(address word) Address {
+	return m.packedAddress(address, m.ReadWord(Addr_ROM_W_RoutinesOffset))
+}
+
+func (m Memory) StringPackedAddress(address word) Address {
+	return m.packedAddress(address, m.ReadWord(Addr_ROM_W_StringsOffset))
+}
+
+// NOTE: packedAddresses won't be calculated correctly for relative memory, only absolute memory
+func (m Memory) packedAddress(address word, offset word) Address {
+	switch m.version {
+	case 1, 2, 3:
+		return Address(2 * address)
+	case 4, 5:
+		return Address(4 * address)
+	case 6, 7:
+		return Address(4*address + 8*offset)
+	case 8:
+		return Address(8 * address)
 	}
-	handler(&m)
-	m.initialized = true
-	return &m
+	panic("Unknown version")
+}
+
+func (m Memory) GetZString(address Address) zstring.ZString {
+	var b byte
+	next_address := address
+	foundEnd := false
+	length := 0
+
+	for !foundEnd {
+		b, next_address = m.ReadByteNext(next_address)
+		_, next_address = m.ReadByteNext(next_address)
+		length += 2
+
+		if b>>7 == 1 {
+			foundEnd = true
+		}
+	}
+
+	return m.GetBytes(address, length)
+}
+
+func (m *Memory) GetAbbreviation(bank int, index int) zstring.ZString {
+	abbr_entry := m.GetAbbreviationsAddress().OffsetWords(int((32*(bank-1) + index)))
+	address := m.ReadWord(abbr_entry)
+	abbreviation := m.GetZString(Address(address * 2))
+	return abbreviation
 }

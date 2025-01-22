@@ -7,7 +7,8 @@ import (
 )
 
 func TestMemory_ReadWriteByte(t *testing.T) {
-	m := NewMemory("./memtest.z3", func(m *Memory) {})
+	m, err := NewMemoryFromFile("./memtest.z3", func(m *Memory) {})
+	testassert.NoError(t, err)
 
 	var target byte = 0x5A
 	targetAddr := Address(target)
@@ -19,7 +20,8 @@ func TestMemory_ReadWriteByte(t *testing.T) {
 }
 
 func TestMemory_ReadByteNextAddress(t *testing.T) {
-	m := NewMemory("./memtest.z3", func(m *Memory) {})
+	m, err := NewMemoryFromFile("./memtest.z3", func(m *Memory) {})
+	testassert.NoError(t, err)
 
 	address := Address(0x5A)
 	_, next_address := m.ReadByteNext(address)
@@ -27,7 +29,8 @@ func TestMemory_ReadByteNextAddress(t *testing.T) {
 }
 
 func TestMemory_ReadWriteWord(t *testing.T) {
-	m := NewMemory("./memtest.z3", func(m *Memory) {})
+	m, err := NewMemoryFromFile("./memtest.z3", func(m *Memory) {})
+	testassert.NoError(t, err)
 
 	targetAddr := Address(0x5A)
 	testassert.Same(t, 0x5A5B, m.ReadWord(targetAddr))
@@ -38,7 +41,8 @@ func TestMemory_ReadWriteWord(t *testing.T) {
 }
 
 func TestMemory_ReadWordNextAddress(t *testing.T) {
-	m := NewMemory("./memtest.z3", func(m *Memory) {})
+	m, err := NewMemoryFromFile("./memtest.z3", func(m *Memory) {})
+	testassert.NoError(t, err)
 
 	address := Address(0x5A)
 	_, next_address := m.ReadWordNext(address)

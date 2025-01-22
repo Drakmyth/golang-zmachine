@@ -9,7 +9,6 @@ import (
 
 	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/memory"
-	"github.com/Drakmyth/golang-zmachine/screen"
 )
 
 type InstructionForm uint8
@@ -39,7 +38,7 @@ const (
 	OT_Omitted  OperandType = 3
 )
 
-type InstructionHandler func(*ZMachine, Instruction, *screen.Screen) bool
+type InstructionHandler func(*ZMachine, Instruction) (bool, error)
 
 type InstructionInfo struct {
 	Form         InstructionForm
@@ -206,6 +205,10 @@ func (operand Operand) asWord() word {
 	return word(operand)
 }
 
+func (operand Operand) asBytes() []byte {
+	return []byte{byte(operand >> 8), byte(operand)}
+}
+
 func (operand Operand) asByte() byte {
 	return byte(operand)
 }
@@ -220,6 +223,14 @@ func (operand Operand) asAddress() memory.Address {
 
 func (operand Operand) asInt() int {
 	return int(operand)
+}
+
+func (operand Operand) asObjectId() ObjectId {
+	return ObjectId(operand)
+}
+
+func (operand Operand) asPropertyId() PropertyId {
+	return PropertyId(operand)
 }
 
 func (zmachine ZMachine) readOperand(optype OperandType, address memory.Address) (Operand, memory.Address) {
