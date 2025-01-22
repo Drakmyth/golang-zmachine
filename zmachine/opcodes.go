@@ -592,7 +592,7 @@ func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	a := instruction.Operands[0].asInt()
+	a := int16(instruction.Operands[0].asInt())
 	fmt.Printf("%v", a)
 	if zmachine.Debug {
 		fmt.Println()
