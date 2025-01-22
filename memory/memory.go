@@ -9,6 +9,7 @@ import (
 type word = uint16
 
 type Memory struct {
+	path        string
 	version     int
 	memory      []byte
 	initialized bool
@@ -22,6 +23,7 @@ func NewMemoryFromFile(path string, initializer func(*Memory)) (*Memory, error) 
 	}
 
 	m := Memory{
+		path:        path,
 		version:     int(bytes[0]),
 		memory:      bytes,
 		initialized: false,
@@ -32,6 +34,11 @@ func NewMemoryFromFile(path string, initializer func(*Memory)) (*Memory, error) 
 
 	return &m, nil
 }
+
+// TODO: This might be needed to support checksum verification. See `verify` opcode.
+// func (m Memory) OriginalFileState() (*Memory, error) {
+// 	return NewMemoryFromFile(m.path, func(memory *Memory) {})
+// }
 
 func (m Memory) GetBytes(address Address, length int) []byte {
 	if !m.initialized {
