@@ -158,6 +158,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xb0: {IF_Short, IM_None, []OperandType{}, rtrue},
 	0xb1: {IF_Short, IM_None, []OperandType{}, rfalse},
 	0xb2: {IF_Short, IM_None, []OperandType{}, print},
+	0xb3: {IF_Short, IM_None, []OperandType{}, print_ret},
 	0xb8: {IF_Short, IM_None, []OperandType{}, ret_popped},
 	0xb9: {IF_Short, IM_None, []OperandType{}, pop}, // This opcode changed to `catch` in V5
 	0xba: {IF_Short, IM_None, []OperandType{}, quit},
@@ -628,6 +629,20 @@ func print_paddr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func print_ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	zstr := zmachine.Memory.GetZString(instruction.NextAddress)
+
+	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
+	str, err := parser.Parse(zstr)
+	assert.NoError(err, "Error parsing print ZString")
+
+	fmt.Print(str)
+	fmt.Println()
+
+	zmachine.endCurrentFrame(1)
+	return true, nil
 }
 
 func pull(zmachine *ZMachine, instruction Instruction) (bool, error) {
