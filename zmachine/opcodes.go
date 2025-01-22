@@ -119,7 +119,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x84: {IF_Short, IM_Store, []OperandType{OT_Large}, get_prop_len},
 	0x85: {IF_Short, IM_None, []OperandType{OT_Large}, inc},
 	0x86: {IF_Short, IM_None, []OperandType{OT_Large}, dec},
-	// 0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
+	0x87: {IF_Short, IM_None, []OperandType{OT_Large}, print_addr},
 	0x89: {IF_Short, IM_None, []OperandType{OT_Large}, remove_obj},
 	0x8a: {IF_Short, IM_None, []OperandType{OT_Large}, print_obj},
 	0x8b: {IF_Short, IM_None, []OperandType{OT_Large}, ret},
@@ -134,6 +134,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0x94: {IF_Short, IM_Store, []OperandType{OT_Small}, get_prop_len},
 	0x95: {IF_Short, IM_None, []OperandType{OT_Small}, inc},
 	0x96: {IF_Short, IM_None, []OperandType{OT_Small}, dec},
+	0x97: {IF_Short, IM_None, []OperandType{OT_Small}, print_addr},
 	0x99: {IF_Short, IM_None, []OperandType{OT_Small}, remove_obj},
 	0x9a: {IF_Short, IM_None, []OperandType{OT_Small}, print_obj},
 	0x9b: {IF_Short, IM_None, []OperandType{OT_Small}, ret},
@@ -148,6 +149,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xa4: {IF_Short, IM_Store, []OperandType{OT_Variable}, get_prop_len},
 	0xa5: {IF_Short, IM_None, []OperandType{OT_Variable}, inc},
 	0xa6: {IF_Short, IM_None, []OperandType{OT_Variable}, dec},
+	0xa7: {IF_Short, IM_None, []OperandType{OT_Variable}, print_addr},
 	0xa9: {IF_Short, IM_None, []OperandType{OT_Variable}, remove_obj},
 	0xaa: {IF_Short, IM_None, []OperandType{OT_Variable}, print_obj},
 	0xab: {IF_Short, IM_None, []OperandType{OT_Variable}, ret},
@@ -574,11 +576,21 @@ func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	return zmachine.performBranch(branch, true), nil
 }
 
-// func print_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
-// 	address := instruction.Operands[0].asAddress()
-// 	zmachine.read_zstring(address)
-// 	return false, nil
-// }
+func print_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	address := instruction.Operands[0].asAddress()
+	zstr := zmachine.Memory.GetZString(address)
+
+	parser := zstring.NewParser(zmachine.Charset, zmachine.Memory.GetAbbreviation)
+	str, err := parser.Parse(zstr)
+	assert.NoError(err, "Error parsing print ZString")
+
+	fmt.Print(str)
+	if zmachine.Debug {
+		fmt.Println()
+	}
+
+	return false, nil
+}
 
 func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asByte()
