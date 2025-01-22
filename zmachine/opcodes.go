@@ -1,7 +1,6 @@
 package zmachine
 
 import (
-	"errors"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -251,7 +250,8 @@ func and(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func call(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	packed_address := instruction.Operands[0].asWord()
 	if packed_address == 0 {
-		return false, errors.New("unimplemented: call address 0")
+		zmachine.endCurrentFrame(0)
+		return false, nil
 	}
 
 	routineAddr := zmachine.Memory.RoutinePackedAddress(packed_address)
