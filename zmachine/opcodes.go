@@ -526,7 +526,7 @@ func mod(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func new_line(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	fmt.Println()
+	zmachine.Screen.PrintText("\n")
 	return false, nil
 }
 
@@ -562,12 +562,7 @@ func print(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	str, err := parser.Parse(zstr)
 	assert.NoError(err, "Error parsing print ZString")
 
-	// fmt.Print(str)
 	zmachine.Screen.PrintText(str)
-	// for i, r := range str {
-
-	// screen.SetContent(i, 0, r, nil, tcell.StyleDefault)
-	// }
 	if zmachine.Debug {
 		fmt.Println()
 	}
@@ -589,7 +584,7 @@ func print_addr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	str, err := parser.Parse(zstr)
 	assert.NoError(err, "Error parsing print ZString")
 
-	fmt.Print(str)
+	zmachine.Screen.PrintText(str)
 	if zmachine.Debug {
 		fmt.Println()
 	}
@@ -601,7 +596,7 @@ func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := instruction.Operands[0].asByte()
 
 	// TODO: This should convert to ZSCII rather than ASCII/Unicode
-	fmt.Print(string(a))
+	zmachine.Screen.PrintText(string(a))
 	if zmachine.Debug {
 		fmt.Println()
 	}
@@ -612,7 +607,7 @@ func print_char(zmachine *ZMachine, instruction Instruction) (bool, error) {
 func print_num(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	a := int16(instruction.Operands[0].asInt())
 
-	fmt.Printf("%v", a)
+	zmachine.Screen.PrintText(fmt.Sprintf("%v", a))
 	if zmachine.Debug {
 		fmt.Println()
 	}
@@ -627,7 +622,7 @@ func print_obj(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	zstr := o.ShortName()
 	str, err := parser.Parse(zstr)
 	assert.NoError(err, "Error parsing object short name")
-	fmt.Printf("%v", str)
+	zmachine.Screen.PrintText(fmt.Sprintf("%v", str))
 	if zmachine.Debug {
 		fmt.Println()
 	}
@@ -641,7 +636,7 @@ func print_paddr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	zstr := zmachine.Memory.GetZString(address)
 	str, err := parser.Parse(zstr)
 	assert.NoError(err, "Error parsing paddr ZString")
-	fmt.Print(str)
+	zmachine.Screen.PrintText(str)
 	if zmachine.Debug {
 		fmt.Println()
 	}
@@ -656,8 +651,8 @@ func print_ret(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	str, err := parser.Parse(zstr)
 	assert.NoError(err, "Error parsing print ZString")
 
-	fmt.Print(str)
-	fmt.Println()
+	zmachine.Screen.PrintText(str)
+	zmachine.Screen.PrintText("\n")
 
 	zmachine.endCurrentFrame(1)
 	return true, nil
@@ -697,8 +692,10 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func quit(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	// TODO: Remove this sleep once input handling has been implemented
+	time.Sleep(time.Second * 10)
+	zmachine.Screen.End()
 	os.Exit(0)
-
 	return false, nil
 }
 

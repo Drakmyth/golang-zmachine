@@ -39,6 +39,7 @@ In other words, load and play the game!`,
 		err = interpreter.Run()
 		if err != nil {
 			fmt.Fprint(os.Stderr, err)
+			interpreter.Screen.End()
 			os.Exit(1)
 		}
 	},
