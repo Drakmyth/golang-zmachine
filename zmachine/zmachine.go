@@ -80,7 +80,6 @@ func Load(story_path string) (*ZMachine, error) {
 }
 
 func (zmachine ZMachine) Run() error {
-	// TODO: Handle input & resize events
 	for {
 		err := zmachine.executeNextInstruction()
 		if err != nil {

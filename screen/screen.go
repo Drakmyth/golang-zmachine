@@ -45,21 +45,27 @@ func (s *Screen) End() {
 	s.screen.Fini()
 }
 
-// TODO: Use this to handle input/resize events
-func (s *Screen) HandleEvent(ev tcell.Event) {
-	switch ev := ev.(type) {
-	case *tcell.EventResize:
-		_, height := s.screen.Size()
-		s.cursorY = height - 1
-		s.screen.Sync()
-	case *tcell.EventKey:
-		if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
-			s.screen.Fini()
-			os.Exit(0)
+func (s *Screen) Read() {
+	stopReading := false
+
+	for !stopReading {
+		ev := <-s.Events
+		switch eventType := ev.(type) {
+		// TODO: Not sure if this is the right place to handle EventResize
+		// 	case *tcell.EventResize:
+		// 		_, height := s.screen.Size()
+		// 		s.cursorY = height - 1
+		// 		s.screen.Sync()
+		case *tcell.EventKey:
+			switch eventType.Key() {
+			case tcell.KeyEscape, tcell.KeyCtrlC:
+				s.screen.Fini()
+				os.Exit(0)
+			case tcell.KeyEnter:
+				stopReading = true
+			}
 		}
 	}
-
-	s.screen.Show()
 }
 
 func (s *Screen) PrintText(text string) {

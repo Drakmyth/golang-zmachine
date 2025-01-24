@@ -692,8 +692,8 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func quit(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	// TODO: Remove this sleep once input handling has been implemented
-	time.Sleep(time.Second * 10)
+	// TODO: Remove this read once input handling has been implemented
+	zmachine.Screen.Read()
 	zmachine.Screen.End()
 	os.Exit(0)
 	return false, nil
@@ -840,7 +840,7 @@ func test_attr(zmachine *ZMachine, instruction Instruction) (bool, error) {
 
 func verify(zmachine *ZMachine, instruction Instruction) (bool, error) {
 	// TODO: Implement checksum verification. The below logic should be similar to what is needed
-	// but doesn't actually pass CZECH right now.
+	// but doesn't actually pass CZECH right now. Also see memory.OriginalFileState.
 
 	// fileLength := int(zmachine.Memory.ReadWord(memory.Addr_ROM_W_FileLength))
 	// checksum := int(zmachine.Memory.ReadWord(memory.Addr_ROM_W_Checksum))
