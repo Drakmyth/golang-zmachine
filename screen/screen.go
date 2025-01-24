@@ -13,6 +13,7 @@ type Screen struct {
 	Events           chan tcell.Event
 	QuitEvents       chan struct{}
 	cursorX, cursorY int
+	Wordwrap         bool
 }
 
 func NewScreen() *Screen {
@@ -36,6 +37,7 @@ func NewScreen() *Screen {
 		QuitEvents: quit,
 		cursorX:    0,
 		cursorY:    height - 1,
+		Wordwrap:   true,
 	}
 }
 
@@ -62,11 +64,15 @@ func (s *Screen) HandleEvent(ev tcell.Event) {
 
 func (s *Screen) PrintText(text string) {
 	fmt.Print(text) // This will print to any output log, but not to the screen
+	width, _ := s.screen.Size()
+
 	for _, r := range text {
-		if r == '\n' {
+		if r == '\n' || (s.Wordwrap && s.cursorX >= width) {
 			s.ScrollUp()
 			s.cursorX = 0
-			continue
+			if r == '\n' {
+				continue
+			}
 		}
 		s.screen.SetContent(s.cursorX, s.cursorY, r, []rune{}, tcell.StyleDefault)
 		s.cursorX++
