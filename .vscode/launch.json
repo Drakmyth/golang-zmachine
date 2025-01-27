@@ -9,8 +9,8 @@
             "program": "${workspaceFolder}",
             "debugAdapter": "dlv-dap",
             "env": {},
-            "args": ["--debug", "./stories/zork1.z3"],
-            "console": "internalConsole"
+            "args": ["./stories/zork1.z3"],
+            "console": "integratedTerminal"
         },
         {
             "name": "Launch czech.z3",
@@ -21,7 +21,7 @@
             "debugAdapter": "dlv-dap",
             "env": {},
             "args": ["--debug", "./stories/czech.z3"],
-            "console": "internalConsole"
+            "console": "integratedTerminal"
         },
     ]
 }
