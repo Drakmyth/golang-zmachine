@@ -55,6 +55,12 @@ func True(v bool, message string, msgargs ...any) {
 	}
 }
 
+func False(v bool, message string, msgargs ...any) {
+	if v {
+		panic(fmt.Sprintf(message, msgargs...))
+	}
+}
+
 func NotSame[E comparable](v1 E, v2 E, message string, msgargs ...any) {
 	if v2 == v1 {
 		panic(fmt.Sprintf(message, msgargs...))
