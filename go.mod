@@ -1,6 +1,6 @@
 module github.com/Drakmyth/golang-zmachine
 
-go 1.23.4
+go 1.23.5
 
 require (
 	github.com/gdamore/tcell/v2 v2.8.1
