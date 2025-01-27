@@ -3,8 +3,8 @@ package zmachine
 import (
 	"fmt"
 	"math/rand/v2"
-	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
@@ -193,6 +193,7 @@ var opcodes = map[Opcode]InstructionInfo{
 	0xe1: {IF_Variable, IM_None, []OperandType{}, storew},
 	0xe2: {IF_Variable, IM_None, []OperandType{}, storeb},
 	0xe3: {IF_Variable, IM_None, []OperandType{}, put_prop},
+	0xe4: {IF_Variable, IM_None, []OperandType{}, read}, // In V5, this uses IM_STORE
 	0xe5: {IF_Variable, IM_None, []OperandType{}, print_char},
 	0xe6: {IF_Variable, IM_None, []OperandType{}, print_num},
 	0xe7: {IF_Variable, IM_Store, []OperandType{}, random},
@@ -692,10 +693,7 @@ func put_prop(zmachine *ZMachine, instruction Instruction) (bool, error) {
 }
 
 func quit(zmachine *ZMachine, instruction Instruction) (bool, error) {
-	// TODO: Remove this read once input handling has been implemented
-	zmachine.Screen.Read()
-	zmachine.Screen.End()
-	os.Exit(0)
+	zmachine.Shutdown(0)
 	return false, nil
 }
 
@@ -713,6 +711,30 @@ func random(zmachine *ZMachine, instruction Instruction) (bool, error) {
 		zmachine.Random = rand.New(rand.NewPCG(seed, seed))
 		instruction.StoreVariable.Write(0)
 	}
+
+	return false, nil
+}
+
+func read(zmachine *ZMachine, instruction Instruction) (bool, error) {
+	text := instruction.Operands[0].asAddress()
+	parse := instruction.Operands[1].asAddress()
+	// TODO: In V4, there are 2 additional parameters here
+
+	// TODO: Redisplay Status Line
+	str := zmachine.Screen.Read()
+	zmachine.Screen.PrintText(str)
+
+	maxTextLength, nextAddress := zmachine.Memory.ReadByteNext(text)
+	maxTextLength++ // Initial value is maximum length - 1, so we increment
+	str = strings.ToLower(str[:min(len(str), int(maxTextLength))])
+	str += "\x00"
+	zmachine.Memory.SetBytes(nextAddress, []byte(str))
+
+	zmachine.Screen.PrintText("\n")
+
+	// TODO: Perform lexical analysis
+	_, nextAddress = zmachine.Memory.ReadByteNext(parse)
+	// maxLexicalWords, nextAddress := zmachine.Memory.ReadByteNext(parse)
 
 	return false, nil
 }

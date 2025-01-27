@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand/v2"
+	"os"
 	"time"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
@@ -77,6 +78,11 @@ func Load(story_path string) (*ZMachine, error) {
 	}
 
 	return &zmachine, nil
+}
+
+func (zmachine ZMachine) Shutdown(exit int) {
+	zmachine.Screen.End()
+	os.Exit(exit)
 }
 
 func (zmachine ZMachine) Run() error {

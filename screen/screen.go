@@ -1,8 +1,8 @@
 package screen
 
 import (
-	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/gdamore/tcell/v2"
@@ -45,31 +45,37 @@ func (s *Screen) End() {
 	s.screen.Fini()
 }
 
-func (s *Screen) Read() {
+func (s *Screen) Read() string {
 	stopReading := false
+	buffer := strings.Builder{}
 
 	for !stopReading {
 		ev := <-s.Events
 		switch eventType := ev.(type) {
 		// TODO: Not sure if this is the right place to handle EventResize
-		// 	case *tcell.EventResize:
-		// 		_, height := s.screen.Size()
-		// 		s.cursorY = height - 1
-		// 		s.screen.Sync()
+		// case *tcell.EventResize:
+		// 	_, height := s.screen.Size()
+		// 	s.cursorY = height - 1
+		// 	s.screen.Sync()
 		case *tcell.EventKey:
 			switch eventType.Key() {
 			case tcell.KeyEscape, tcell.KeyCtrlC:
+				// TODO: Replace with call to ZMachine.Shutdown(0)
 				s.screen.Fini()
 				os.Exit(0)
 			case tcell.KeyEnter:
+				// TODO: In V5+ this should check for terminating characters rather than only newline
 				stopReading = true
+			case tcell.KeyRune:
+				buffer.WriteRune(eventType.Rune())
 			}
 		}
 	}
+
+	return buffer.String()
 }
 
 func (s *Screen) PrintText(text string) {
-	fmt.Print(text) // This will print to any output log, but not to the screen
 	width, _ := s.screen.Size()
 
 	for _, r := range text {

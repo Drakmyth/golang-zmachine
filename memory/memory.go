@@ -2,7 +2,9 @@ package memory
 
 import (
 	"os"
+	"slices"
 
+	"github.com/Drakmyth/golang-zmachine/assert"
 	"github.com/Drakmyth/golang-zmachine/zstring"
 )
 
@@ -41,15 +43,22 @@ func NewMemoryFromFile(path string, initializer func(*Memory)) (*Memory, error) 
 // }
 
 func (m Memory) GetBytes(address Address, length int) []byte {
-	if !m.initialized {
-		panic("Cannot call Memory#GetBytes during memory initialization!")
-	}
-
+	assert.True(m.initialized, "Cannot call Memory#GetBytes during memory initialization!")
 	return m.memory[address:address.OffsetBytes(length)]
 }
 
 func (m Memory) GetBytesNext(address Address, length int) ([]byte, Address) {
 	return m.GetBytes(address, length), address.OffsetBytes(length)
+}
+
+func (m *Memory) SetBytes(address Address, data []byte) {
+	assert.True(m.initialized, "Cannot call Memory#SetBytes during memory initialization!")
+	m.memory = slices.Replace(m.memory, int(address), int(address)+len(data), data...)
+}
+
+func (m *Memory) SetBytesNext(address Address, data []byte) Address {
+	m.SetBytes(address, data)
+	return address.OffsetBytes(len(data))
 }
 
 // NOTE: The warning here is due to the native Go stdmethods checker being over-eager on
